@@ -25,6 +25,8 @@ type GrpcModule struct {
 
 	// instance: *grpc.Server
 	GrpcInterface *func(instance interface{})
+
+	registerService func(*grpc.Server)
 }
 
 func (g *GrpcModule) ModuleConfig() *declaration.ModuleConfig {
@@ -41,6 +43,7 @@ func (g *GrpcModule) ModuleConfig() *declaration.ModuleConfig {
 
 func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 	server = grpc.NewServer()
+
 	if interceptor != nil {
 		(*g.GrpcInterface)(server)
 	}
@@ -52,6 +55,9 @@ func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 	if g.ListenAddress == "" {
 		g.ListenAddress = defaultListenAddress
 	}
+
+	// 注册用户服务实现
+	g.registerService(server)
 
 	lis, err := net.Listen(g.Network, g.ListenAddress)
 	if err != nil {
@@ -71,6 +77,10 @@ func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 // request instance: *grpc.Server
 func (g *GrpcModule) Interceptor() *func(instance interface{}) {
 	return g.GrpcInterface
+}
+
+func (g *GrpcModule) RegisterService(fn func(*grpc.Server)) {
+	g.registerService = fn
 }
 
 func (g *GrpcModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {

@@ -14,15 +14,14 @@ var moduleLoaders []declaration.ModuleLoader
 var gModule *grpcmodule.GrpcModule
 
 func init() {
-	// 通过拦截器获取原始grpc实例
-	grpcInterface := func(instance interface{}) {
-		server := instance.(*grpc.Server)
-		pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
-	}
 
-	gModule = &grpcmodule.GrpcModule{
-		GrpcInterface: &grpcInterface,
-	}
+	gModule = &grpcmodule.GrpcModule{}
+
+	// 注册实际业务实现
+	gModule.RegisterService(func(server *grpc.Server) {
+		pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
+	})
+
 	moduleLoaders = []declaration.ModuleLoader{gModule}
 }
 

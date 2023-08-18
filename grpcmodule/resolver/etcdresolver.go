@@ -115,8 +115,9 @@ func (e Etcd) NewResolver() (gResolver.Builder, error) {
 	return &etcdBuilder{c: etcd}, nil
 }
 
-// RegisterEtcdInstance ttl (s)
-func RegisterEtcdInstance(ctx context.Context, target, instanceId, address string, ttl int64) error {
+// RegisterEtcdSrvInstance 注册服务器实例 用于注册自身作为服务器实例，以便于其他客户端可以动态感知，
+// ttl (s) 租约续期时间 如果在指定时间未续约，etcd将取消注册，其他客户端将无法感知该实例
+func RegisterEtcdSrvInstance(ctx context.Context, target, instanceId, address string, ttl int64) error {
 	manager := managers[target]
 	if manager == nil {
 		var err error

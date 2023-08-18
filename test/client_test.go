@@ -83,3 +83,41 @@ func TestCallServerWithStaticResolver(t *testing.T) {
 	doRequest(ctx, conn)
 	<-ctx.Done()
 }
+
+// 使用动态服务器路由列表(基于etcd) 启动 grpcstarter_test.go -> TestStartMoreSrv 启动一批服务端
+func TestCallServerWithEtcdResolver(t *testing.T) {
+	etcdSrv := "http://localhost:2379"
+
+	// 开启一个异步协程，5秒后，将相关服务端实例注册到etcd，测试本客户端是否可以感知并开始请求
+	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		time.Sleep(time.Second * 5)
+		fmt.Println("register new instance")
+		_ = resolver.RegisterEtcdSrvInstance(ctx, "users", "1", "localhost:8085", 3)
+		_ = resolver.RegisterEtcdSrvInstance(ctx, "users", "2", "localhost:8084", 3)
+		time.Sleep(time.Second * 15)
+		fmt.Println("stop instance keepalive")
+		cancel()
+	}()
+
+	// 也可以通过直接操作etcd将相关服务端进行注册
+	// etcdctl get "" --prefix=true 查看所有key
+	// 手动注册服务端实例至etcd
+	// etcdctl put "users/1" '{"Addr":"localhost:8085"}'
+	// etcdctl put "users/2" '{"Addr":"localhost:8084"}'
+	// etcdctl put "users/3" '{"Addr":"localhost:8083"}'
+
+	conn, err := grpcmodule.NewClientConnWithResolver(resolver.EtcdScheme+":///users", resolver.Etcd{EtcdUrls: []string{etcdSrv}}, true,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
+	)
+
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	doRequest(ctx, conn)
+	<-ctx.Done()
+}

@@ -1,8 +1,11 @@
 package test
 
 import (
+	"fmt"
 	"github.com/golang-acexy/starter-grpc/grpcmodule"
+	"github.com/golang-acexy/starter-grpc/test/pbuser"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"google.golang.org/grpc"
 	"testing"
 	"time"
 )
@@ -11,7 +14,15 @@ var moduleLoaders []declaration.ModuleLoader
 var gModule *grpcmodule.GrpcModule
 
 func init() {
-	gModule = &grpcmodule.GrpcModule{}
+	// 通过拦截器获取原始grpc实例
+	grpcInterface := func(instance interface{}) {
+		server := instance.(*grpc.Server)
+		pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
+	}
+
+	gModule = &grpcmodule.GrpcModule{
+		GrpcInterface: &grpcInterface,
+	}
 	moduleLoaders = []declaration.ModuleLoader{gModule}
 }
 
@@ -19,7 +30,61 @@ func TestLoadAndUnload(t *testing.T) {
 	m := declaration.Module{
 		ModuleLoaders: moduleLoaders,
 	}
-	m.Load()
+	err := m.Load()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
 	time.Sleep(time.Second * 2)
 	m.Unload(10)
+}
+
+// 启动服务端
+func TestStartSrv(t *testing.T) {
+	m := declaration.Module{
+		ModuleLoaders: moduleLoaders,
+	}
+	err := m.Load()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	select {}
+}
+
+// 启动一批服务端 8082 - 8085
+func TestStartMoreSrv(t *testing.T) {
+
+	grpcInterface := func(instance interface{}) {
+		server := instance.(*grpc.Server)
+		pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
+	}
+
+	gModule1 := &grpcmodule.GrpcModule{
+		GrpcInterface: &grpcInterface,
+		ListenAddress: ":8082",
+	}
+	gModule2 := &grpcmodule.GrpcModule{
+		GrpcInterface: &grpcInterface,
+		ListenAddress: ":8083",
+	}
+	gModule3 := &grpcmodule.GrpcModule{
+		GrpcInterface: &grpcInterface,
+		ListenAddress: ":8084",
+	}
+	gModule4 := &grpcmodule.GrpcModule{
+		GrpcInterface: &grpcInterface,
+		ListenAddress: ":8085",
+	}
+	loaders := []declaration.ModuleLoader{gModule1, gModule2, gModule3, gModule4}
+
+	m := declaration.Module{
+		ModuleLoaders: loaders,
+	}
+	err := m.Load()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	select {}
 }

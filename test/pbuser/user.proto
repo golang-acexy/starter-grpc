@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package pbuser;
+
+
+// 控制生成的文件所属go的package
+// 在生成的文件中声明 package pbuser
+option go_package = "/pbuser";
+
+
+enum Sex {
+  M = 0;
+  W = 1;
+}
+
+message Request {
+  uint64 id = 1 ;
+  string name = 2 ;
+}
+
+message Response {
+  repeated User users = 1;
+}
+
+message User {
+  uint64 id = 1;
+  string name = 2;
+  Sex sex = 3;
+  uint32 age = 4;
+}
+
+// 定义远程RPC接口
+service UserService {
+  //  通过ID查询用户
+  rpc QueryById(Request) returns (Response) {}
+}
+

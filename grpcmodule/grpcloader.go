@@ -65,7 +65,7 @@ func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 	}
 
 	go func() {
-		log.Logrus().Traceln("gRPC will listen at ", g.ListenAddress)
+		log.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 		if err = server.Serve(lis); err != nil {
 		}
 	}()

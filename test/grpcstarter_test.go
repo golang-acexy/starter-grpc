@@ -63,23 +63,27 @@ func TestStartMoreSrv(t *testing.T) {
 		GrpcInterface: &grpcInterface,
 		ListenAddress: ":8082",
 	}
+
 	gModule2 := &grpcmodule.GrpcModule{
 		GrpcInterface: &grpcInterface,
 		ListenAddress: ":8083",
 	}
+
 	gModule3 := &grpcmodule.GrpcModule{
 		GrpcInterface: &grpcInterface,
 		ListenAddress: ":8084",
 	}
+
 	gModule4 := &grpcmodule.GrpcModule{
 		GrpcInterface: &grpcInterface,
 		ListenAddress: ":8085",
 	}
-	loaders := []declaration.ModuleLoader{gModule1, gModule2, gModule3, gModule4}
 
+	loaders := []declaration.ModuleLoader{gModule1, gModule2, gModule3, gModule4}
 	m := declaration.Module{
 		ModuleLoaders: loaders,
 	}
+
 	err := m.Load()
 	if err != nil {
 		fmt.Printf("%+v\n", err)

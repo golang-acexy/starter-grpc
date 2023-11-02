@@ -57,7 +57,9 @@ func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 	}
 
 	// 注册用户服务实现
-	g.registerService(server)
+	if g.registerService != nil {
+		g.registerService(server)
+	}
 
 	lis, err := net.Listen(g.Network, g.ListenAddress)
 	if err != nil {

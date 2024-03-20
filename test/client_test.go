@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/acexy/golang-toolkit/math/random"
-	"github.com/acexy/golang-toolkit/util"
+	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-grpc/grpcmodule"
 	"github.com/golang-acexy/starter-grpc/grpcmodule/resolver"
 	"github.com/golang-acexy/starter-grpc/test/pbuser"
@@ -45,7 +45,7 @@ func userCall(userService pbuser.UserServiceClient) {
 		fmt.Printf("QueryById Error %T %+v\n", err, err)
 		return
 	}
-	fmt.Println(util.ToJson(user))
+	fmt.Println(json.ToJson(user))
 }
 
 // 使用直连的形式请求服务端

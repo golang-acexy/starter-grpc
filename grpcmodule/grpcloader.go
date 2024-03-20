@@ -1,7 +1,7 @@
 package grpcmodule
 
 import (
-	"github.com/acexy/golang-toolkit/log"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"google.golang.org/grpc"
 	"net"
@@ -67,7 +67,7 @@ func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 	}
 
 	go func() {
-		log.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
+		logger.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 		if err = server.Serve(lis); err != nil {
 		}
 	}()

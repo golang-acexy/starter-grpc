@@ -1,4 +1,4 @@
-# only for author's ps
+# only for author's path
 PROTO_BIN_PATH := /Users/acexy/Repository/cache/golang/project/demo-go-grpc/bin
 export PATH := $(PROTO_BIN_PATH):${PATH}
 

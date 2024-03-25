@@ -24,7 +24,7 @@ type GrpcModule struct {
 	GrpcModuleConfig *declaration.ModuleConfig
 
 	// instance: *grpc.Server
-	GrpcInterface *func(instance interface{})
+	GrpcInterceptor func(instance interface{})
 
 	registerService func(*grpc.Server)
 }
@@ -34,19 +34,16 @@ func (g *GrpcModule) ModuleConfig() *declaration.ModuleConfig {
 		return g.GrpcModuleConfig
 	}
 	return &declaration.ModuleConfig{
-		ModuleName:               "gRPC",
+		ModuleName:               "GRpc",
 		UnregisterPriority:       0,
 		UnregisterAllowAsync:     true,
 		UnregisterMaxWaitSeconds: 30,
+		LoadInterceptor:          g.GrpcInterceptor,
 	}
 }
 
-func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
+func (g *GrpcModule) Register() (interface{}, error) {
 	server = grpc.NewServer()
-
-	if interceptor != nil {
-		(*g.GrpcInterface)(server)
-	}
 
 	if g.Network == "" {
 		g.Network = defaultNetwork
@@ -63,7 +60,7 @@ func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 
 	lis, err := net.Listen(g.Network, g.ListenAddress)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	go func() {
@@ -72,13 +69,7 @@ func (g *GrpcModule) Register(interceptor *func(instance interface{})) error {
 		}
 	}()
 
-	return nil
-}
-
-// Interceptor 初始化gRPC原始实例拦截器
-// request instance: *grpc.Server
-func (g *GrpcModule) Interceptor() *func(instance interface{}) {
-	return g.GrpcInterface
+	return server, nil
 }
 
 func (g *GrpcModule) RegisterService(fn func(*grpc.Server)) {
@@ -86,7 +77,7 @@ func (g *GrpcModule) RegisterService(fn func(*grpc.Server)) {
 }
 
 func (g *GrpcModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
-	done := make(chan bool)
+	done := make(chan interface{})
 	go func() {
 		server.GracefulStop()
 		done <- true

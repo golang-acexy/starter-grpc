@@ -16,11 +16,16 @@ var gModule *grpcmodule.GrpcModule
 func init() {
 
 	gModule = &grpcmodule.GrpcModule{}
+	gModule.GrpcInterceptor = func(instance interface{}) {
+		gServer := instance.(*grpc.Server)
+		// 使用加载参数拦截注入服务
+		pbuser.RegisterUserServiceServer(gServer, &pbuser.UserServiceImpl{})
+	}
 
-	// 注册实际业务实现
-	gModule.RegisterService(func(server *grpc.Server) {
-		pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
-	})
+	//// 注册实际业务实现
+	//gModule.RegisterService(func(server *grpc.Server) {
+	//	pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
+	//})
 
 	moduleLoaders = []declaration.ModuleLoader{gModule}
 }
@@ -60,23 +65,23 @@ func TestStartMoreSrv(t *testing.T) {
 	}
 
 	gModule1 := &grpcmodule.GrpcModule{
-		GrpcInterface: &grpcInterface,
-		ListenAddress: ":8082",
+		GrpcInterceptor: grpcInterface,
+		ListenAddress:   ":8082",
 	}
 
 	gModule2 := &grpcmodule.GrpcModule{
-		GrpcInterface: &grpcInterface,
-		ListenAddress: ":8083",
+		GrpcInterceptor: grpcInterface,
+		ListenAddress:   ":8083",
 	}
 
 	gModule3 := &grpcmodule.GrpcModule{
-		GrpcInterface: &grpcInterface,
-		ListenAddress: ":8084",
+		GrpcInterceptor: grpcInterface,
+		ListenAddress:   ":8084",
 	}
 
 	gModule4 := &grpcmodule.GrpcModule{
-		GrpcInterface: &grpcInterface,
-		ListenAddress: ":8085",
+		GrpcInterceptor: grpcInterface,
+		ListenAddress:   ":8085",
 	}
 
 	loaders := []declaration.ModuleLoader{gModule1, gModule2, gModule3, gModule4}

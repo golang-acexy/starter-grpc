@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/acexy/golang-toolkit v0.0.4
-	github.com/golang-acexy/starter-parent v0.0.3
+	github.com/golang-acexy/starter-parent v0.0.5
 	go.etcd.io/etcd/client/v3 v3.5.12
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0

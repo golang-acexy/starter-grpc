@@ -16,10 +16,9 @@ var gModule *grpcmodule.GrpcModule
 func init() {
 
 	gModule = &grpcmodule.GrpcModule{}
-	gModule.GrpcInterceptor = func(instance interface{}) {
-		gServer := instance.(*grpc.Server)
+	gModule.GrpcInterceptor = func(instance *grpc.Server) {
 		// 使用加载参数拦截注入服务
-		pbuser.RegisterUserServiceServer(gServer, &pbuser.UserServiceImpl{})
+		pbuser.RegisterUserServiceServer(instance, &pbuser.UserServiceImpl{})
 	}
 
 	//// 注册实际业务实现
@@ -59,9 +58,8 @@ func TestStartSrv(t *testing.T) {
 // 启动一批服务端 8082 - 8085
 func TestStartMoreSrv(t *testing.T) {
 
-	grpcInterface := func(instance interface{}) {
-		server := instance.(*grpc.Server)
-		pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
+	grpcInterface := func(instance *grpc.Server) {
+		pbuser.RegisterUserServiceServer(instance, &pbuser.UserServiceImpl{})
 	}
 
 	gModule1 := &grpcmodule.GrpcModule{

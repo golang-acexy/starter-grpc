@@ -23,8 +23,7 @@ type GrpcModule struct {
 
 	GrpcModuleConfig *declaration.ModuleConfig
 
-	// instance: *grpc.Server
-	GrpcInterceptor func(instance interface{})
+	GrpcInterceptor func(instance *grpc.Server)
 
 	registerService func(*grpc.Server)
 }
@@ -38,7 +37,11 @@ func (g *GrpcModule) ModuleConfig() *declaration.ModuleConfig {
 		UnregisterPriority:       0,
 		UnregisterAllowAsync:     true,
 		UnregisterMaxWaitSeconds: 30,
-		LoadInterceptor:          g.GrpcInterceptor,
+		LoadInterceptor: func(instance interface{}) {
+			if g.GrpcInterceptor != nil {
+				g.GrpcInterceptor(instance.(*grpc.Server))
+			}
+		},
 	}
 }
 

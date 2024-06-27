@@ -2,7 +2,7 @@ package resolver
 
 import (
 	"context"
-	"fmt"
+	"github.com/acexy/golang-toolkit/logger"
 	etcdClient "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/naming/endpoints"
 	"google.golang.org/grpc/codes"
@@ -100,32 +100,33 @@ func (r *resolver) Close() {
 
 type Etcd struct {
 	EtcdUrls []string
+	etcd     *etcdClient.Client
+	managers map[string]endpoints.Manager
 }
 
-var etcd *etcdClient.Client
-var managers map[string]endpoints.Manager
-
-func (e Etcd) NewResolver() (gResolver.Builder, error) {
+func (e *Etcd) NewResolver() (gResolver.Builder, error) {
 	var err error
-	etcd, err = etcdClient.NewFromURLs(e.EtcdUrls)
+	etcd, err := etcdClient.NewFromURLs(e.EtcdUrls)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
+		return nil, err
 	}
-	managers = make(map[string]endpoints.Manager, 1)
+	e.etcd = etcd
+	e.managers = make(map[string]endpoints.Manager, 1)
 	return &etcdBuilder{c: etcd}, nil
 }
 
 // RegisterEtcdSrvInstance 注册服务器实例 用于注册自身作为服务器实例，以便于其他客户端可以动态感知，
 // ttl (s) 租约续期时间 如果在指定时间未续约，etcd将取消注册，其他客户端将无法感知该实例
-func RegisterEtcdSrvInstance(ctx context.Context, target, instanceId, address string, ttl int64) error {
-	manager := managers[target]
+func (e *Etcd) RegisterEtcdSrvInstance(ctx context.Context, target, instanceId, address string, ttl int64) {
+	manager := e.managers[target]
 	if manager == nil {
 		var err error
-		manager, err = endpoints.NewManager(etcd, target)
+		manager, err = endpoints.NewManager(e.etcd, target)
 		if err != nil {
-			return err
+			logger.Logrus().Errorln("etcd register manager target:", target, "address:", address, " error:", err)
+			return
 		}
-		managers[target] = manager
+		e.managers[target] = manager
 	}
 
 	if strings.HasSuffix(target, "/") {
@@ -134,29 +135,30 @@ func RegisterEtcdSrvInstance(ctx context.Context, target, instanceId, address st
 		target += "/" + instanceId
 	}
 
-	lease, err := etcd.Grant(context.TODO(), ttl)
+	lease, err := e.etcd.Grant(context.TODO(), ttl)
 	if err != nil {
-		return err
+		logger.Logrus().Errorln("etcd register manager target:", target, "address:", address, " error:", err)
+		return
 	}
 	err = manager.AddEndpoint(context.TODO(), target, endpoints.Endpoint{Addr: address}, etcdClient.WithLease(lease.ID))
 	if err != nil {
-		return err
+		logger.Logrus().Errorln("etcd register manager target:", target, "address:", address, " error:", err)
+		return
 	}
 
-	alive, err := etcd.KeepAlive(ctx, lease.ID)
+	alive, err := e.etcd.KeepAlive(ctx, lease.ID)
 	if err != nil {
-		return err
+		logger.Logrus().Errorln("etcd register manager target:", target, "address:", address, " error:", err)
+		return
 	}
 
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
-				return
 			case <-alive:
+				logger.Logrus().Traceln("auto keep alive grpc target:", target, "address:", address)
 			}
 		}
 	}()
-
-	return nil
 }

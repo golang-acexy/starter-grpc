@@ -15,7 +15,7 @@ type UserServiceImpl struct {
 
 func (u *UserServiceImpl) QueryById(ctx context.Context, request *Request) (*Response, error) {
 	p, _ := peer.FromContext(ctx)
-	fmt.Println(p.Addr, "Get Input User", request.String())
+	fmt.Println(p.LocalAddr, "Get Input User", request.String())
 	return &Response{
 		Users: []*User{{
 			Name: random.RandString(5),

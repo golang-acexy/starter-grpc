@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/math/random"
 	"github.com/acexy/golang-toolkit/util/json"
-	"github.com/golang-acexy/starter-grpc/grpcmodule"
-	"github.com/golang-acexy/starter-grpc/grpcmodule/resolver"
+	"github.com/golang-acexy/starter-grpc/grpcstarter"
+	"github.com/golang-acexy/starter-grpc/grpcstarter/resolver"
 	"github.com/golang-acexy/starter-grpc/test/pbuser"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,9 +17,9 @@ import (
 
 var userService pbuser.UserServiceClient
 
-func doRequest(ctx context.Context, conn *grpcmodule.Conn) {
+func doRequest(ctx context.Context, gClient *grpcstarter.GrpcClient) {
 	if userService == nil {
-		userService = pbuser.NewUserServiceClient(conn.GetConn())
+		userService = pbuser.NewUserServiceClient(gClient.GetConn())
 	}
 	go func() {
 		for {
@@ -27,7 +27,7 @@ func doRequest(ctx context.Context, conn *grpcmodule.Conn) {
 			time.Sleep(time.Millisecond * 200)
 			select {
 			case <-ctx.Done():
-				_ = conn.CloseConn()
+				_ = gClient.CloseConn()
 				break
 			default:
 			}
@@ -50,7 +50,7 @@ func userCall(userService pbuser.UserServiceClient) {
 
 // 使用直连的形式请求服务端
 func TestCallServer(t *testing.T) {
-	conn, err := grpcmodule.NewClientCoon("localhost:8081", true, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpcstarter.NewClientConn("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
@@ -62,7 +62,7 @@ func TestCallServer(t *testing.T) {
 
 // 使用静态服务端列表 启动 grpcstarter_test.go -> TestStartMoreSrv 启动一批服务端
 func TestCallServerWithStaticResolver(t *testing.T) {
-	conn, err := grpcmodule.NewClientConnWithResolver(resolver.StaticScheme+":///users", resolver.Static{Addresses: map[string][]string{
+	conn, err := grpcstarter.NewClientConnWithResolver(resolver.StaticScheme+":///users", resolver.Static{Addresses: map[string][]string{
 		"users": {
 			"127.0.0.1:8085",
 			"127.0.0.1:8084",
@@ -70,7 +70,7 @@ func TestCallServerWithStaticResolver(t *testing.T) {
 			"127.0.0.1:8082",
 			"127.0.0.1:8081",
 		},
-	}}, true,
+	}},
 		grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
 	)
@@ -88,26 +88,8 @@ func TestCallServerWithStaticResolver(t *testing.T) {
 func TestCallServerWithEtcdResolver(t *testing.T) {
 	etcdSrv := "http://localhost:2379"
 
-	// 开启一个异步协程，5秒后，将相关服务端实例注册到etcd，测试本客户端是否可以感知并开始请求
-	go func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		time.Sleep(time.Second * 5)
-		fmt.Println("register new instance")
-		_ = resolver.RegisterEtcdSrvInstance(ctx, "users", "1", "localhost:8085", 3)
-		_ = resolver.RegisterEtcdSrvInstance(ctx, "users", "2", "localhost:8084", 3)
-		time.Sleep(time.Second * 15)
-		fmt.Println("stop instance keepalive")
-		cancel()
-	}()
-
-	// 也可以通过直接操作etcd将相关服务端进行注册
-	// etcdctl get "" --prefix=true 查看所有key
-	// 手动注册服务端实例至etcd
-	// etcdctl put "users/1" '{"Addr":"localhost:8085"}'
-	// etcdctl put "users/2" '{"Addr":"localhost:8084"}'
-	// etcdctl put "users/3" '{"Addr":"localhost:8083"}'
-
-	conn, err := grpcmodule.NewClientConnWithResolver(resolver.EtcdScheme+":///users", resolver.Etcd{EtcdUrls: []string{etcdSrv}}, true,
+	etcdResolver := &resolver.Etcd{EtcdUrls: []string{etcdSrv}}
+	conn, err := grpcstarter.NewClientConnWithResolver(resolver.EtcdScheme+":///users", etcdResolver,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
 	)
@@ -116,7 +98,27 @@ func TestCallServerWithEtcdResolver(t *testing.T) {
 		fmt.Printf("%v\n", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	// 开启一个异步协程，5秒后，将相关服务端实例注册到etcd，测试本客户端是否可以感知并开始请求
+	go func() {
+		// 也可以通过直接操作etcd将相关服务端进行注册
+		// etcdctl get "" --prefix=true 查看所有key
+		// 手动注册服务端实例至etcd
+		// etcdctl put "users/1" '{"Addr":"localhost:8085"}'
+		// etcdctl put "users/2" '{"Addr":"localhost:8084"}'
+		// etcdctl put "users/3" '{"Addr":"localhost:8083"}'
+		ctx, cancel := context.WithCancel(context.Background())
+		time.Sleep(time.Second * 5)
+		fmt.Println("register new instance")
+		etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "1", "localhost:8085", 3)
+		etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "2", "localhost:8084", 3)
+		etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "3", "localhost:8083", 3)
+		etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "4", "localhost:8082", 10)
+		time.Sleep(time.Second * 40)
+		fmt.Println("stop instance keepalive")
+		cancel()
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	doRequest(ctx, conn)
 	<-ctx.Done()

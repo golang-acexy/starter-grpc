@@ -27,7 +27,7 @@ func (g *GrpcStarter) Setting() *parent.Setting {
 	if g.GrpcSetting != nil {
 		return g.GrpcSetting
 	}
-	return parent.NewSetting("gRPC-Starter", 0, true, time.Second*30, func(instance interface{}) {
+	return parent.NewSetting("gRPC-Starter", 0, false, time.Second*30, func(instance interface{}) {
 		if g.InitFunc != nil {
 			g.InitFunc(instance.(*grpc.Server))
 		}

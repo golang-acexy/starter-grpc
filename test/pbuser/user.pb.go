@@ -287,8 +287,8 @@ var file_pbuser_user_proto_goTypes = []interface{}{
 var file_pbuser_user_proto_depIdxs = []int32{
 	3, // 0: pbuser.Response.users:type_name -> pbuser.User
 	0, // 1: pbuser.User.sex:type_name -> pbuser.Sex
-	1, // 2: pbuser.UserService.QueryById:input_type -> pbuser.Request
-	2, // 3: pbuser.UserService.QueryById:output_type -> pbuser.Response
+	1, // 2: pbuser.UserService.SelectById:input_type -> pbuser.Request
+	2, // 3: pbuser.UserService.SelectById:output_type -> pbuser.Response
 	3, // [3:4] is the sub-list for method output_type
 	2, // [2:3] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

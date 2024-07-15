@@ -42,7 +42,7 @@ func userCall(userService pbuser.UserServiceClient) {
 	if err != nil {
 		statusError := status.Convert(err)
 		fmt.Printf("%+v\n", statusError.Code())
-		fmt.Printf("QueryById Error %T %+v\n", err, err)
+		fmt.Printf("SelectById Error %T %+v\n", err, err)
 		return
 	}
 	fmt.Println(json.ToJson(user))

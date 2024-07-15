@@ -36,7 +36,7 @@ func NewUserServiceClient(cc grpc.ClientConnInterface) UserServiceClient {
 
 func (c *userServiceClient) QueryById(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
-	err := c.cc.Invoke(ctx, "/pbuser.UserService/QueryById", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pbuser.UserService/SelectById", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ type UnimplementedUserServiceServer struct {
 }
 
 func (UnimplementedUserServiceServer) QueryById(context.Context, *Request) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QueryById not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method SelectById not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 
@@ -82,7 +82,7 @@ func _UserService_QueryById_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pbuser.UserService/QueryById",
+		FullMethod: "/pbuser.UserService/SelectById",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).QueryById(ctx, req.(*Request))
@@ -98,7 +98,7 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UserServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "QueryById",
+			MethodName: "SelectById",
 			Handler:    _UserService_QueryById_Handler,
 		},
 	},

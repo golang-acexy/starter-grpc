@@ -6,7 +6,6 @@ import (
 
 // 静态gRPC服务端列表解析器
 // 可以通过配置一批服务端列表，通过该解析器实现自动适配
-
 type staticBuilder struct {
 	addresses map[string][]string
 }

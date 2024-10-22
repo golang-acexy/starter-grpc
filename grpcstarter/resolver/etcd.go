@@ -54,7 +54,6 @@ type resolver struct {
 
 func (r *resolver) watch() {
 	defer r.wg.Done()
-
 	allUps := make(map[string]*endpoints.Update)
 	for {
 		select {
@@ -64,7 +63,6 @@ func (r *resolver) watch() {
 			if !ok {
 				return
 			}
-
 			for _, up := range ups {
 				switch up.Op {
 				case endpoints.Add:
@@ -73,7 +71,6 @@ func (r *resolver) watch() {
 					delete(allUps, up.Key)
 				}
 			}
-
 			addresses := convertToGRPCAddress(allUps)
 			_ = r.cc.UpdateState(gResolver.State{Addresses: addresses})
 		}

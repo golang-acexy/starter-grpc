@@ -8,8 +8,8 @@ require (
 	github.com/acexy/golang-toolkit v0.0.21
 	github.com/golang-acexy/starter-parent v0.1.5
 	go.etcd.io/etcd/client/v3 v3.5.15
-	google.golang.org/grpc v1.67.0
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/grpc v1.67.1
+	google.golang.org/protobuf v1.35.1
 )
 
 require (

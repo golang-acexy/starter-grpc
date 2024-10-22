@@ -8,7 +8,7 @@
 
 支持快速开启服务端/客户端，支持Client模式使用resolver服务发现模式
 
-- resolver 模式
+- etcdResolver 模式
 
   - etcd 动态服务发现
 
@@ -17,8 +17,8 @@
     func TestCallServerWithEtcdResolver(t *testing.T) {
     etcdSrv := "http://localhost:2379"
     
-        etcdResolver := &resolver.Etcd{EtcdUrls: []string{etcdSrv}}
-        conn, err := grpcstarter.NewClientConnWithResolver(resolver.EtcdScheme+":///users", etcdResolver,
+        etcdResolver := &etcdResolver.Etcd{EtcdUrls: []string{etcdSrv}}
+        conn, err := grpcstarter.NewClientConnWithResolver(etcdResolver.EtcdScheme+":///users", etcdResolver,
             grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
             grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
         )
@@ -60,7 +60,7 @@
     ````go
     // 使用静态服务端列表 启动 grpcstarter_test.go -> TestStartMoreSrv 启动一批服务端
     func TestCallServerWithStaticResolver(t *testing.T) {
-      conn, err := grpcstarter.NewClientConnWithResolver(resolver.StaticScheme+":///users", resolver.Static{Addresses: map[string][]string{
+      conn, err := grpcstarter.NewClientConnWithResolver(etcdResolver.StaticScheme+":///users", etcdResolver.Static{Addresses: map[string][]string{
         "users": {
           "127.0.0.1:8085",
           "127.0.0.1:8084",

@@ -7,21 +7,23 @@ import (
 // 静态gRPC服务端列表解析器
 // 可以通过配置一批服务端列表，通过该解析器实现自动适配
 type staticBuilder struct {
-	addresses map[string][]string
+	addresses []string
+	resolver  *StaticResolver
 }
 
 type StaticResolver struct {
 	target    gResolver.Target
 	cc        gResolver.ClientConn
-	addresses map[string][]string
+	addresses []string
 }
 
-func (b *staticBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opts gResolver.BuildOptions) (gResolver.Resolver, error) {
+func (s *staticBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opts gResolver.BuildOptions) (gResolver.Resolver, error) {
 	r := &StaticResolver{
 		target:    target,
 		cc:        cc,
-		addresses: b.addresses,
+		addresses: s.addresses,
 	}
+	s.resolver = r
 	r.register()
 	return r, nil
 }
@@ -29,15 +31,14 @@ func (b *staticBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, 
 func (*staticBuilder) Scheme() string { return StaticScheme }
 
 func (r *StaticResolver) register() {
-	addresses := r.addresses[r.target.Endpoint()]
+	_ = r.cc.UpdateState(staticAddressesToState(r.addresses))
+}
+func staticAddressesToState(addresses []string) gResolver.State {
 	resolverAddress := make([]gResolver.Address, len(addresses))
 	for i, address := range addresses {
 		resolverAddress[i] = gResolver.Address{Addr: address}
 	}
-	err := r.cc.UpdateState(gResolver.State{Addresses: resolverAddress})
-	if err != nil {
-		return
-	}
+	return gResolver.State{Addresses: resolverAddress}
 }
 
 func (*StaticResolver) ResolveNow(o gResolver.ResolveNowOptions) {
@@ -50,9 +51,22 @@ type StaticResolverParam struct {
 }
 
 type Static struct {
-	Addresses map[string][]string
+	addresses []string
+	builder   *staticBuilder
 }
 
-func (s Static) NewResolver() (gResolver.Builder, error) {
-	return &staticBuilder{addresses: s.Addresses}, nil
+func NewStaticResolver(addresses []string) *Static {
+	return &Static{addresses: addresses}
+}
+
+func (s *Static) NewResolver() (gResolver.Builder, error) {
+	builder := &staticBuilder{addresses: s.addresses}
+	s.builder = builder
+	return builder, nil
+}
+
+// Update 更新地址信息
+func (s *Static) Update(changed []string) {
+	s.addresses = changed
+	_ = s.builder.resolver.cc.UpdateState(staticAddressesToState(changed))
 }

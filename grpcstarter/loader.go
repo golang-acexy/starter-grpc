@@ -15,12 +15,12 @@ type GrpcStarter struct {
 	Network       string
 	ListenAddress string
 
-	GrpcSetting *parent.Setting
-
 	InitFunc func(instance *grpc.Server)
 
 	// 注册服务
 	RegisterService func(g *grpc.Server)
+
+	GrpcSetting *parent.Setting
 }
 
 func (g *GrpcStarter) Setting() *parent.Setting {

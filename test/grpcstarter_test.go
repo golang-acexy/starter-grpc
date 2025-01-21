@@ -16,7 +16,6 @@ var starterLoader *parent.StarterLoader
 var grpcStarter *grpcstarter.GrpcStarter
 
 func init() {
-
 	grpcStarter = &grpcstarter.GrpcStarter{}
 
 	// 使用初始化函数
@@ -27,10 +26,11 @@ func init() {
 		pbuser.RegisterUserServiceServer(g, &pbuser.UserServiceImpl{})
 	}
 
+	starterLoader = parent.NewStarterLoader([]parent.Starter{grpcStarter})
+
 }
 
 func TestLoadAndUnload(t *testing.T) {
-	starterLoader = parent.NewStarterLoader([]parent.Starter{grpcStarter})
 	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)

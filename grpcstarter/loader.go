@@ -80,8 +80,10 @@ func (g *GrpcStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 	select {
 	case <-done:
 		gracefully = true
+		stopped = true
 	case <-time.After(maxWaitTime):
 		gracefully = false
+		stopped = true
 	}
 	return
 }

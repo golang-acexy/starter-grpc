@@ -3,12 +3,12 @@ module github.com/golang-acexy/starter-grpc
 go 1.23.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.42
-	github.com/golang-acexy/starter-parent v0.1.13
+	github.com/acexy/golang-toolkit v0.0.44
+	github.com/golang-acexy/starter-parent v0.1.14
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.9
-	go.etcd.io/etcd/client/v3 v3.5.19
+	go.etcd.io/etcd/client/v3 v3.5.20
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
@@ -24,9 +24,9 @@ require (
 	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
 	github.com/alibabacloud-go/kms-20160120/v3 v3.2.3 // indirect
 	github.com/alibabacloud-go/openapi-util v0.1.1 // indirect
-	github.com/alibabacloud-go/tea v1.3.2 // indirect
+	github.com/alibabacloud-go/tea v1.3.5 // indirect
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.7 // indirect
-	github.com/aliyun/alibaba-cloud-sdk-go v1.63.93 // indirect
+	github.com/aliyun/alibaba-cloud-sdk-go v1.63.101 // indirect
 	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.5.1 // indirect
 	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.9 // indirect
 	github.com/aliyun/aliyun-secretsmanager-client-go v1.1.5 // indirect
@@ -52,14 +52,17 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.62.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/prometheus/common v0.63.0 // indirect
+	github.com/prometheus/procfs v0.16.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/timandy/routine v1.1.4 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/timandy/routine v1.1.5 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.19 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.19 // indirect
+	go.etcd.io/etcd/api/v3 v3.5.20 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.5.20 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
@@ -68,8 +71,8 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250311190419-81fb87f6b8bf // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250311190419-81fb87f6b8bf // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250324211829-b45e905df463 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

@@ -9,8 +9,7 @@ import (
 
 var grpcServer *grpc.Server
 
-type GrpcStarter struct {
-
+type GrpcConfig struct {
 	// grpc listener
 	Network       string
 	ListenAddress string
@@ -19,8 +18,37 @@ type GrpcStarter struct {
 
 	// 注册服务
 	RegisterService func(g *grpc.Server)
+}
 
+type GrpcStarter struct {
+	Config     GrpcConfig
+	LazyConfig func() GrpcConfig
+
+	config      *GrpcConfig
 	GrpcSetting *parent.Setting
+}
+
+func (g *GrpcStarter) getConfig() *GrpcConfig {
+	if g.config == nil {
+		var config GrpcConfig
+		if g.LazyConfig != nil {
+			config = g.LazyConfig()
+		} else {
+			config = g.Config
+		}
+		if config.Network == "" {
+			config.Network = "tcp"
+		}
+		if config.ListenAddress == "" {
+			config.ListenAddress = ":8081"
+		}
+		// 注册用户服务实现
+		if config.RegisterService != nil {
+			config.RegisterService(grpcServer)
+		}
+		g.config = &config
+	}
+	return g.config
 }
 
 func (g *GrpcStarter) Setting() *parent.Setting {
@@ -28,29 +56,18 @@ func (g *GrpcStarter) Setting() *parent.Setting {
 		return g.GrpcSetting
 	}
 	return parent.NewSetting("gRPC-Starter", 0, false, time.Second*30, func(instance interface{}) {
-		if g.InitFunc != nil {
-			g.InitFunc(instance.(*grpc.Server))
+		config := g.getConfig()
+		if config.InitFunc != nil {
+			config.InitFunc(instance.(*grpc.Server))
 		}
 	})
 }
 
 func (g *GrpcStarter) Start() (interface{}, error) {
 	grpcServer = grpc.NewServer()
+	config := g.getConfig()
 
-	if g.Network == "" {
-		g.Network = "tcp"
-	}
-
-	if g.ListenAddress == "" {
-		g.ListenAddress = ":8081"
-	}
-
-	// 注册用户服务实现
-	if g.RegisterService != nil {
-		g.RegisterService(grpcServer)
-	}
-
-	lis, err := net.Listen(g.Network, g.ListenAddress)
+	lis, err := net.Listen(config.Network, config.ListenAddress)
 	if err != nil {
 		return nil, err
 	}

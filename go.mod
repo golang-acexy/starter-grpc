@@ -4,10 +4,10 @@ go 1.23.5
 
 require (
 	github.com/acexy/golang-toolkit v0.0.44
-	github.com/golang-acexy/starter-parent v0.1.14
+	github.com/golang-acexy/starter-parent v0.1.15
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.9
-	go.etcd.io/etcd/client/v3 v3.5.20
-	google.golang.org/grpc v1.71.0
+	go.etcd.io/etcd/client/v3 v3.5.21
+	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
 )
 
@@ -24,9 +24,9 @@ require (
 	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
 	github.com/alibabacloud-go/kms-20160120/v3 v3.2.3 // indirect
 	github.com/alibabacloud-go/openapi-util v0.1.1 // indirect
-	github.com/alibabacloud-go/tea v1.3.5 // indirect
+	github.com/alibabacloud-go/tea v1.3.7 // indirect
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.7 // indirect
-	github.com/aliyun/alibaba-cloud-sdk-go v1.63.101 // indirect
+	github.com/aliyun/alibaba-cloud-sdk-go v1.63.103 // indirect
 	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.5.1 // indirect
 	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.9 // indirect
 	github.com/aliyun/aliyun-secretsmanager-client-go v1.1.5 // indirect
@@ -61,12 +61,12 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/timandy/routine v1.1.5 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.20 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.20 // indirect
+	go.etcd.io/etcd/api/v3 v3.5.21 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.5.21 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect

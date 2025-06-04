@@ -19,15 +19,14 @@ func init() {
 	grpcStarter = &grpcstarter.GrpcStarter{}
 
 	// 使用初始化函数
-	//grpcStarter.InitFunc = func(instance *grpc.Server) {
+	//grpcStarter.Config.InitFunc = func(instance *grpc.Server) {
 	//}
 
-	grpcStarter.RegisterService = func(g *grpc.Server) {
+	grpcStarter.Config.RegisterService = func(g *grpc.Server) {
 		pbuser.RegisterUserServiceServer(g, &pbuser.UserServiceImpl{})
 	}
 
 	starterLoader = parent.NewStarterLoader([]parent.Starter{grpcStarter})
-
 }
 
 func TestLoadAndUnload(t *testing.T) {
@@ -63,28 +62,35 @@ func TestStartMoreSrv(t *testing.T) {
 	}
 
 	gModule1 := &grpcstarter.GrpcStarter{
-		RegisterService: registerService,
-		ListenAddress:   ":8082",
+		Config: grpcstarter.GrpcConfig{
+			RegisterService: registerService,
+			ListenAddress:   ":8082",
+		},
 	}
 
 	gModule2 := &grpcstarter.GrpcStarter{
-		RegisterService: registerService,
-		ListenAddress:   ":8083",
+		Config: grpcstarter.GrpcConfig{
+			RegisterService: registerService,
+			ListenAddress:   ":8083",
+		},
 	}
 
 	gModule3 := &grpcstarter.GrpcStarter{
-		RegisterService: registerService,
-		ListenAddress:   ":8084",
+		Config: grpcstarter.GrpcConfig{
+			RegisterService: registerService,
+			ListenAddress:   ":8084",
+		},
 	}
 
 	gModule4 := &grpcstarter.GrpcStarter{
-		RegisterService: registerService,
-		ListenAddress:   ":8085",
+		Config: grpcstarter.GrpcConfig{
+			RegisterService: registerService,
+			ListenAddress:   ":8085",
+		},
 	}
+	starterLoader.AddStarter(gModule1, gModule2, gModule3, gModule4)
 
-	loaders := parent.NewStarterLoader([]parent.Starter{gModule1, gModule2, gModule3, gModule4})
-
-	err := loaders.Start()
+	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return

@@ -23,7 +23,7 @@ func doRequest(ctx context.Context, gClient *grpcstarter.GrpcClient) {
 	go func() {
 		for {
 			userCall(userService)
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Second)
 			select {
 			case <-ctx.Done():
 				_ = gClient.CloseConn()

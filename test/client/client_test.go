@@ -1,4 +1,4 @@
-package test
+package client
 
 import (
 	"context"
@@ -53,8 +53,5 @@ func TestCallServer(t *testing.T) {
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	doRequest(ctx, conn)
-	<-ctx.Done()
+	doRequest(context.Background(), conn)
 }

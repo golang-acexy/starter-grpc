@@ -30,6 +30,8 @@ func (n *nacosBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, o
 	instances, err := n.client.SelectInstances(vo.SelectInstancesParam{ServiceName: target.Endpoint(), GroupName: n.group, HealthyOnly: true})
 	if err == nil && len(instances) > 0 {
 		_ = r.conn.UpdateState(nacosInstanceToState(instances))
+	} else {
+		return nil, errors.New("no instance available")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	n.watchCancel = cancel

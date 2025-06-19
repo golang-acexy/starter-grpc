@@ -4,6 +4,7 @@ go 1.23.5
 
 require (
 	github.com/acexy/golang-toolkit v0.0.48
+	github.com/envoyproxy/protoc-gen-validate v1.2.1
 	github.com/golang-acexy/starter-parent v0.1.15
 	github.com/nacos-group/nacos-sdk-go/v2 v2.3.2
 	go.etcd.io/etcd/client/v3 v3.6.1

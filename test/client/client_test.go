@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/acexy/golang-toolkit/math/random"
+	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
 	"github.com/golang-acexy/starter-grpc/test/pbuser"
@@ -49,9 +50,11 @@ func userCall(userService pbuser.UserServiceClient) {
 
 // 使用直连的形式请求服务端
 func TestCallServer(t *testing.T) {
-	conn, err := grpcstarter.NewClientConn("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	sys.EnableLocalTraceId(nil)
+	conn, err := grpcstarter.NewClientConn("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(grpcstarter.ClientTraceInterceptor()))
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
 	doRequest(context.Background(), conn)
+	sys.ShutdownHolding()
 }

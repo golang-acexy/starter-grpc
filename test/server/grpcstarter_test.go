@@ -16,7 +16,11 @@ var starterLoader *parent.StarterLoader
 var grpcStarter *grpcstarter.GrpcStarter
 
 func init() {
-	grpcStarter = &grpcstarter.GrpcStarter{}
+	grpcStarter = &grpcstarter.GrpcStarter{
+		Config: grpcstarter.GrpcConfig{
+			EnableTraceInterceptor: true,
+		},
+	}
 
 	// 使用初始化函数
 	//grpcStarter.Config.InitFunc = func(instance *grpc.Server) {

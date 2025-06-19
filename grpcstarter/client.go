@@ -1,8 +1,11 @@
 package grpcstarter
 
 import (
+	"context"
+	"github.com/acexy/golang-toolkit/sys"
 	"github.com/golang-acexy/starter-grpc/grpcstarter/resolver"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type GrpcClient struct {
@@ -26,6 +29,27 @@ func NewClientConn(target string, opts ...grpc.DialOption) (*GrpcClient, error) 
 	return &GrpcClient{
 		gRpcRawClientCoon: conn,
 	}, nil
+}
+
+func ClientTraceInterceptor() grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if !sys.IsEnabledLocalTraceId() {
+			return nil
+		}
+		traceId := sys.GetLocalTraceId()
+		if traceId != "" {
+			return nil
+		}
+		md, ok := metadata.FromOutgoingContext(ctx)
+		if !ok {
+			md = metadata.New(nil)
+		} else {
+			md = md.Copy()
+		}
+		md.Set(traceIdKey, sys.GetLocalTraceId())
+		ctx = metadata.NewOutgoingContext(ctx, md)
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 // NewClientConnWithResolver 使用resolver配置服务端 创建客户端连接

@@ -33,20 +33,18 @@ func NewClientConn(target string, opts ...grpc.DialOption) (*GrpcClient, error) 
 
 func ClientTraceInterceptor() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		if !sys.IsEnabledLocalTraceId() {
-			return nil
-		}
-		traceId := sys.GetLocalTraceId()
-		if traceId != "" {
-			return nil
-		}
 		md, ok := metadata.FromOutgoingContext(ctx)
 		if !ok {
 			md = metadata.New(nil)
 		} else {
 			md = md.Copy()
 		}
-		md.Set(traceIdKey, sys.GetLocalTraceId())
+		if sys.IsEnabledLocalTraceId() {
+			traceId := sys.GetLocalTraceId()
+			if traceId != "" {
+				md.Set(traceIdKey, sys.GetLocalTraceId())
+			}
+		}
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}

@@ -50,6 +50,7 @@ func TestLoadAndUnload(t *testing.T) {
 
 // 启动服务端
 func TestStartSrv(t *testing.T) {
+	sys.EnableLocalTraceId(nil)
 	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)

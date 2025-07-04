@@ -25,4 +25,4 @@ go.work
 *.log
 
 test/config
-test/naming
+naming

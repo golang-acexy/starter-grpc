@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/acexy/golang-toolkit/math/random"
+	"github.com/acexy/golang-toolkit/sys"
 	"google.golang.org/grpc/peer"
 )
 
@@ -15,7 +16,7 @@ type UserServiceImpl struct {
 
 func (u *UserServiceImpl) QueryById(ctx context.Context, request *Request) (*Response, error) {
 	p, _ := peer.FromContext(ctx)
-	fmt.Println(p.LocalAddr, "Get Input User", request.String())
+	fmt.Println(sys.GetLocalTraceId(), p.LocalAddr, "Get Input User", request.String())
 	return &Response{
 		Users: []*User{{
 			Name: random.RandString(5),

@@ -1,4 +1,4 @@
-package test
+package client
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	_ "google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/credentials/insecure"
 	"testing"
-	"time"
 )
 
 // 使用静态服务端列表 启动 grpcstarter_test.go -> TestStartMoreSrv 启动一批服务端
@@ -29,14 +28,14 @@ func TestCallServerWithStaticResolver(t *testing.T) {
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
-	go func() {
-		time.Sleep(time.Second * 5)
-		fmt.Println("移除其他实例，只保留8084")
-		r.Update([]string{"127.0.0.1:8084"})
-		time.Sleep(time.Second * 5)
-		fmt.Println("增加实例，保留 8081 8082")
-		r.Update([]string{"127.0.0.1:8081", "127.0.0.1:8082"})
-	}()
+	//go func() {
+	//	time.Sleep(time.Second * 5)
+	//	fmt.Println("移除其他实例，只保留8084")
+	//	r.Update([]string{"127.0.0.1:8084"})
+	//	time.Sleep(time.Second * 5)
+	//	fmt.Println("增加实例，保留 8081 8082")
+	//	r.Update([]string{"127.0.0.1:8081", "127.0.0.1:8082"})
+	//}()
 	doRequest(context.Background(), conn)
 	sys.ShutdownHolding()
 }

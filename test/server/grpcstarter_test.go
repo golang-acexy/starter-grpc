@@ -1,4 +1,4 @@
-package test
+package server
 
 import (
 	"fmt"
@@ -16,7 +16,11 @@ var starterLoader *parent.StarterLoader
 var grpcStarter *grpcstarter.GrpcStarter
 
 func init() {
-	grpcStarter = &grpcstarter.GrpcStarter{}
+	grpcStarter = &grpcstarter.GrpcStarter{
+		Config: grpcstarter.GrpcConfig{
+			EnableTraceInterceptor: true,
+		},
+	}
 
 	// 使用初始化函数
 	//grpcStarter.Config.InitFunc = func(instance *grpc.Server) {
@@ -46,6 +50,7 @@ func TestLoadAndUnload(t *testing.T) {
 
 // 启动服务端
 func TestStartSrv(t *testing.T) {
+	sys.EnableLocalTraceId(nil)
 	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)

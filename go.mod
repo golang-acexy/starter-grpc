@@ -4,7 +4,7 @@ go 1.23.5
 
 require (
 	github.com/acexy/golang-toolkit v0.0.49
-	github.com/golang-acexy/starter-parent v0.1.15
+	github.com/golang-acexy/starter-parent v0.1.16
 	github.com/nacos-group/nacos-sdk-go/v2 v2.3.2
 	go.etcd.io/etcd/client/v3 v3.6.1
 	google.golang.org/grpc v1.73.0
@@ -54,7 +54,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
-	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect

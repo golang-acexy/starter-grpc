@@ -3,6 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
 	"github.com/golang-acexy/starter-grpc/grpcstarter/resolver"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
@@ -10,8 +13,6 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"testing"
-	"time"
 )
 
 func TestCallServerWithNacosResolver(t *testing.T) {

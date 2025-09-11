@@ -2,12 +2,13 @@ package resolver
 
 import (
 	"context"
+	"sync"
+
 	etcdClient "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/naming/endpoints"
 	"google.golang.org/grpc/codes"
 	gResolver "google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/status"
-	"sync"
 )
 
 type etcdBuilder struct {

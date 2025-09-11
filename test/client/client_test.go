@@ -3,6 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/acexy/golang-toolkit/math/random"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
@@ -11,8 +14,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-	"testing"
-	"time"
 )
 
 var userService pbuser.UserServiceClient

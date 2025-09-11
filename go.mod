@@ -3,12 +3,12 @@ module github.com/golang-acexy/starter-grpc
 go 1.23.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.49
-	github.com/golang-acexy/starter-parent v0.1.16
-	github.com/nacos-group/nacos-sdk-go/v2 v2.3.2
-	go.etcd.io/etcd/client/v3 v3.6.1
-	google.golang.org/grpc v1.73.0
-	google.golang.org/protobuf v1.36.6
+	github.com/acexy/golang-toolkit v0.0.52
+	github.com/golang-acexy/starter-parent v0.1.18
+	github.com/nacos-group/nacos-sdk-go/v2 v2.3.3
+	go.etcd.io/etcd/client/v3 v3.6.4
+	google.golang.org/grpc v1.75.1
+	google.golang.org/protobuf v1.36.9
 )
 
 require (
@@ -60,20 +60,20 @@ require (
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/timandy/routine v1.1.5 // indirect
+	github.com/timandy/routine v1.1.6 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	go.etcd.io/etcd/api/v3 v3.6.1 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.6.1 // indirect
+	go.etcd.io/etcd/api/v3 v3.6.4 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.6.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250603155806-513f23925822 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

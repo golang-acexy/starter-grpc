@@ -3,13 +3,14 @@ package client
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
 	"github.com/golang-acexy/starter-grpc/grpcstarter/resolver"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/credentials/insecure"
-	"testing"
 )
 
 // 使用静态服务端列表 启动 grpcstarter_test.go -> TestStartMoreSrv 启动一批服务端

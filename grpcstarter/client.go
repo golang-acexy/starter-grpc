@@ -3,7 +3,6 @@ package grpcstarter
 import (
 	"context"
 
-	"github.com/acexy/golang-toolkit/sys"
 	"github.com/golang-acexy/starter-grpc/grpcstarter/resolver"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -40,10 +39,10 @@ func ClientTraceInterceptor() grpc.UnaryClientInterceptor {
 		} else {
 			md = md.Copy()
 		}
-		if sys.IsEnabledLocalTraceId() {
-			traceId := sys.GetLocalTraceId()
+		if traceIdLogger != nil {
+			traceId := traceIdLogger.GetTraceId()
 			if traceId != "" {
-				md.Set(traceIdKey, sys.GetLocalTraceId())
+				md.Set(traceIdKey, traceId)
 			}
 		}
 		ctx = metadata.NewOutgoingContext(ctx, md)

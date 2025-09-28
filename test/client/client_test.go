@@ -51,7 +51,6 @@ func userCall(userService pbuser.UserServiceClient) {
 
 // 使用直连的形式请求服务端
 func TestCallServer(t *testing.T) {
-	sys.EnableLocalTraceId(nil)
 	conn, err := grpcstarter.NewClientConn("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(grpcstarter.ClientTraceInterceptor()))
 	if err != nil {
 		fmt.Printf("%v\n", err)

@@ -35,7 +35,7 @@ func TestCallServerWithNacosResolver(t *testing.T) {
 	})
 
 	nacosResolver := resolver.NewNacosResolver(client, "DEFAULT_GROUP")
-	conn, err := grpcstarter.NewClientConnWithResolver(resolver.NacosScheme+":///go", nacosResolver,
+	conn, err := grpcstarter.NewClientConnWithResolver(resolver.NacosScheme+":///go", nil, nacosResolver,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
 	)

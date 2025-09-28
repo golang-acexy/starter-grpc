@@ -13,7 +13,7 @@ import (
 const traceIdKey = "trace-id"
 
 var grpcServer *grpc.Server
-var traceIdSupplier TraceIdSupplier
+var supplier TraceIdSupplier
 
 type TraceIdSupplier interface {
 	SetTraceId(traceId string)
@@ -59,7 +59,7 @@ func (g *GrpcStarter) getConfig() *GrpcConfig {
 		// 注册用户服务实现
 		if config.RegisterService != nil {
 			if config.TraceIdSupplier != nil {
-				traceIdSupplier = config.TraceIdSupplier
+				supplier = config.TraceIdSupplier
 				grpcServer = grpc.NewServer(grpc.UnaryInterceptor(serverTraceInterceptor))
 			} else {
 				grpcServer = grpc.NewServer()
@@ -86,7 +86,7 @@ func (g *GrpcStarter) Setting() *parent.Setting {
 func serverTraceInterceptor(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	if vals := md.Get(traceIdKey); len(vals) > 0 {
-		traceIdSupplier.SetTraceId(vals[0])
+		supplier.SetTraceId(vals[0])
 	}
 	return handler(ctx, req)
 }

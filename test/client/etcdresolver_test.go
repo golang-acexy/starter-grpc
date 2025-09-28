@@ -21,7 +21,7 @@ import (
 func TestCallServerWithEtcdResolver(t *testing.T) {
 	client, _ := etcdClient.NewFromURLs([]string{"http://localhost:2379"})
 	etcdResolver := resolver.NewEtcdResolver(client)
-	conn, err := grpcstarter.NewClientConnWithResolver(resolver.EtcdScheme+":///users", etcdResolver,
+	conn, err := grpcstarter.NewClientConnWithResolver(resolver.EtcdScheme+":///users", nil, etcdResolver,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
 	)

@@ -60,6 +60,7 @@ require (
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/timandy/routine v1.1.6 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	go.etcd.io/etcd/api/v3 v3.6.5 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.6.5 // indirect

@@ -21,7 +21,10 @@ func (g *GrpcClient) CloseConn() error {
 }
 
 // NewClientConn 创建客户端连接
-func NewClientConn(target string, opts ...grpc.DialOption) (*GrpcClient, error) {
+func NewClientConn(target string, traceIdSupplier TraceIdSupplier, opts ...grpc.DialOption) (*GrpcClient, error) {
+	if traceIdSupplier != nil {
+		opts = append(opts, grpc.WithUnaryInterceptor(clientTraceInterceptor(traceIdSupplier)))
+	}
 	conn, err := grpc.NewClient(target, opts...)
 	if err != nil {
 		return nil, err
@@ -31,7 +34,7 @@ func NewClientConn(target string, opts ...grpc.DialOption) (*GrpcClient, error) 
 	}, nil
 }
 
-func ClientTraceInterceptor() grpc.UnaryClientInterceptor {
+func clientTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		md, ok := metadata.FromOutgoingContext(ctx)
 		if !ok {
@@ -51,7 +54,7 @@ func ClientTraceInterceptor() grpc.UnaryClientInterceptor {
 }
 
 // NewClientConnWithResolver 使用resolver配置服务端 创建客户端连接
-func NewClientConnWithResolver(target string, iResolver resolver.IResolver, opts ...grpc.DialOption) (*GrpcClient, error) {
+func NewClientConnWithResolver(target string, traceIdSupplier TraceIdSupplier, iResolver resolver.IResolver, opts ...grpc.DialOption) (*GrpcClient, error) {
 	gResolver, err := iResolver.NewResolver()
 	if err != nil {
 		return nil, err
@@ -62,5 +65,5 @@ func NewClientConnWithResolver(target string, iResolver resolver.IResolver, opts
 	} else {
 		opts = append(opts, grpc.WithResolvers(gResolver))
 	}
-	return NewClientConn(target, opts...)
+	return NewClientConn(target, traceIdSupplier, opts...)
 }

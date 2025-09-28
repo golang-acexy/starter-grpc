@@ -39,8 +39,8 @@ func ClientTraceInterceptor() grpc.UnaryClientInterceptor {
 		} else {
 			md = md.Copy()
 		}
-		if traceIdLogger != nil {
-			traceId := traceIdLogger.GetTraceId()
+		if traceIdSupplier != nil {
+			traceId := traceIdSupplier.GetTraceId()
 			if traceId != "" {
 				md.Set(traceIdKey, traceId)
 			}

@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/acexy/golang-toolkit/logger"
 	"github.com/golang-acexy/starter-parent/parent"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -14,7 +13,12 @@ import (
 const traceIdKey = "trace-id"
 
 var grpcServer *grpc.Server
-var traceIdLogger logger.TraceIdSupplier
+var traceIdSupplier TraceIdSupplier
+
+type TraceIdSupplier interface {
+	SetTraceId(traceId string)
+	GetTraceId() string
+}
 
 type GrpcConfig struct {
 	// grpc listener
@@ -26,8 +30,8 @@ type GrpcConfig struct {
 	// 注册服务
 	RegisterService func(g *grpc.Server)
 
-	// 启动时是否开启链路追踪拦截器
-	TraceIdLogger logger.TraceIdSupplier
+	// 链路追踪TraceId日志实现
+	TraceIdSupplier TraceIdSupplier
 }
 
 type GrpcStarter struct {
@@ -54,9 +58,8 @@ func (g *GrpcStarter) getConfig() *GrpcConfig {
 		}
 		// 注册用户服务实现
 		if config.RegisterService != nil {
-			if config.TraceIdLogger != nil {
-				logger.SetTraceIdSupplier(config.TraceIdLogger)
-				traceIdLogger = config.TraceIdLogger
+			if config.TraceIdSupplier != nil {
+				traceIdSupplier = config.TraceIdSupplier
 				grpcServer = grpc.NewServer(grpc.UnaryInterceptor(serverTraceInterceptor))
 			} else {
 				grpcServer = grpc.NewServer()
@@ -83,7 +86,7 @@ func (g *GrpcStarter) Setting() *parent.Setting {
 func serverTraceInterceptor(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	if vals := md.Get(traceIdKey); len(vals) > 0 {
-		traceIdLogger.SetTraceId(vals[0])
+		traceIdSupplier.SetTraceId(vals[0])
 	}
 	return handler(ctx, req)
 }

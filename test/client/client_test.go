@@ -22,7 +22,7 @@ var userService pbuser.UserServiceClient
 
 func doRequest(ctx context.Context, gClient *grpcstarter.GrpcClient) {
 	if userService == nil {
-		userService = pbuser.NewUserServiceClient(gClient.GetConn())
+		userService = pbuser.NewUserServiceClient(gClient.GetRawConn())
 	}
 	go func() {
 		for {
@@ -54,7 +54,8 @@ func userCall(userService pbuser.UserServiceClient) {
 // 使用直连的形式请求服务端
 func TestCallServer(t *testing.T) {
 	logger.SetTraceIdSupplier(test.GetTraceIdSupplier())
-	conn, err := grpcstarter.NewClientConn("localhost:8081",
+	conn, err := grpcstarter.NewClientConnWithTraceSupplier(
+		"localhost:8081",
 		test.GetTraceIdSupplier(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

@@ -24,20 +24,16 @@ type GrpcConfig struct {
 	// grpc listener
 	Network       string
 	ListenAddress string
-
-	InitFunc func(instance *grpc.Server)
-
-	// 注册服务
-	RegisterService func(g *grpc.Server)
-
+	InitFunc      func(instance *grpc.Server)
 	// 链路追踪TraceId日志实现
 	TraceIdSupplier TraceIdSupplier
+	// 注册服务
+	RegisterService func(g *grpc.Server)
 }
 
 type GrpcStarter struct {
-	Config     GrpcConfig
-	LazyConfig func() GrpcConfig
-
+	Config      GrpcConfig
+	LazyConfig  func() GrpcConfig
 	config      *GrpcConfig
 	GrpcSetting *parent.Setting
 }
@@ -103,7 +99,6 @@ func (g *GrpcStarter) Start() (interface{}, error) {
 			errChn <- err
 		}
 	}()
-
 	select {
 	case <-time.After(time.Second):
 		return grpcServer, nil

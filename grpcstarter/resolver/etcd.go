@@ -21,13 +21,11 @@ func (b etcdBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opt
 		target: target.Endpoint(),
 		conn:   cc,
 	}
-
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	manager, err := endpoints.NewManager(r.client, r.target)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "etcdResolver: failed to new endpoint manager: %s", err)
 	}
-
 	all, err := manager.List(context.Background())
 	if err == nil && len(all) > 0 {
 		var addresses []gResolver.Address
@@ -36,7 +34,6 @@ func (b etcdBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opt
 		}
 		_ = r.conn.UpdateState(gResolver.State{Addresses: addresses})
 	}
-
 	r.etcdWatch, err = manager.NewWatchChannel(r.ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "etcdResolver: failed to new watch channer: %s", err)

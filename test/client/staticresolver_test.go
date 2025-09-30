@@ -22,7 +22,9 @@ func TestCallServerWithStaticResolver(t *testing.T) {
 		"127.0.0.1:8082",
 		"127.0.0.1:8081",
 	})
-	conn, err := grpcstarter.NewClientConnWithResolver(resolver.StaticScheme+":///users", r,
+	conn, err := grpcstarter.NewClientConnWithResolver(
+		resolver.StaticScheme+":///users",
+		r,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
 	)

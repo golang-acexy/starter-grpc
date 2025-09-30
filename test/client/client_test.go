@@ -6,10 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/math/random"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
+	"github.com/golang-acexy/starter-grpc/test"
 	"github.com/golang-acexy/starter-grpc/test/pbuser"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,7 +22,7 @@ var userService pbuser.UserServiceClient
 
 func doRequest(ctx context.Context, gClient *grpcstarter.GrpcClient) {
 	if userService == nil {
-		userService = pbuser.NewUserServiceClient(gClient.GetConn())
+		userService = pbuser.NewUserServiceClient(gClient.GetRawConn())
 	}
 	go func() {
 		for {
@@ -46,13 +48,17 @@ func userCall(userService pbuser.UserServiceClient) {
 		fmt.Printf("SelectById Error %T %+v\n", err, err)
 		return
 	}
-	fmt.Println(json.ToJson(user))
+	logger.Logrus().Infoln("request", json.ToJson(user))
 }
 
 // 使用直连的形式请求服务端
 func TestCallServer(t *testing.T) {
-	sys.EnableLocalTraceId(nil)
-	conn, err := grpcstarter.NewClientConn("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(grpcstarter.ClientTraceInterceptor()))
+	logger.SetTraceIdSupplier(test.GetTraceIdSupplier())
+	conn, err := grpcstarter.NewClientConnWithTraceSupplier(
+		"localhost:8081",
+		test.GetTraceIdSupplier(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}

@@ -5,9 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
+	"github.com/golang-acexy/starter-grpc/test"
 	"github.com/golang-acexy/starter-grpc/test/pbuser"
 	"github.com/golang-acexy/starter-parent/parent"
 	"google.golang.org/grpc"
@@ -17,9 +19,10 @@ var starterLoader *parent.StarterLoader
 var grpcStarter *grpcstarter.GrpcStarter
 
 func init() {
+	logger.SetTraceIdSupplier(test.GetTraceIdSupplier())
 	grpcStarter = &grpcstarter.GrpcStarter{
 		Config: grpcstarter.GrpcConfig{
-			EnableTraceInterceptor: true,
+			TraceIdSupplier: test.GetTraceIdSupplier(),
 		},
 	}
 
@@ -51,7 +54,6 @@ func TestLoadAndUnload(t *testing.T) {
 
 // 启动服务端
 func TestStartSrv(t *testing.T) {
-	sys.EnableLocalTraceId(nil)
 	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)

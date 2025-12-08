@@ -3,8 +3,8 @@ module github.com/golang-acexy/starter-grpc
 go 1.24.6
 
 require (
-	github.com/acexy/golang-toolkit v0.0.58
-	github.com/golang-acexy/starter-parent v0.1.20
+	github.com/acexy/golang-toolkit v0.0.59
+	github.com/golang-acexy/starter-parent v0.1.21
 	github.com/nacos-group/nacos-sdk-go/v2 v2.3.5
 	go.etcd.io/etcd/client/v3 v3.6.6
 	google.golang.org/grpc v1.77.0
@@ -31,7 +31,7 @@ require (
 	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.5.1 // indirect
 	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.9 // indirect
 	github.com/aliyun/aliyun-secretsmanager-client-go v1.1.5 // indirect
-	github.com/aliyun/credentials-go v1.4.8 // indirect
+	github.com/aliyun/credentials-go v1.4.9 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -74,8 +74,8 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.13.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251124214823-79d6a2a48846 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

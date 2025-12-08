@@ -71,7 +71,7 @@ func (g *GrpcStarter) Setting() *parent.Setting {
 	if g.GrpcSetting != nil {
 		return g.GrpcSetting
 	}
-	return parent.NewSetting("gRPC-Starter", 1, false, time.Second*30, func(instance interface{}) {
+	return parent.NewSetting("gRPC-Starter", 1, false, time.Second*30, func(instance any) {
 		config := g.getConfig()
 		if config.InitFunc != nil {
 			config.InitFunc(instance.(*grpc.Server))
@@ -79,7 +79,7 @@ func (g *GrpcStarter) Setting() *parent.Setting {
 	})
 }
 
-func serverTraceInterceptor(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func serverTraceInterceptor(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	if vals := md.Get(traceIdKey); len(vals) > 0 {
 		supplier.SetTraceId(vals[0])
@@ -87,7 +87,7 @@ func serverTraceInterceptor(ctx context.Context, req interface{}, _ *grpc.UnaryS
 	return handler(ctx, req)
 }
 
-func (g *GrpcStarter) Start() (interface{}, error) {
+func (g *GrpcStarter) Start() (any, error) {
 	config := g.getConfig()
 	lis, err := net.Listen(config.Network, config.ListenAddress)
 	if err != nil {

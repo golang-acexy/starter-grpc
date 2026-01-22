@@ -49,7 +49,7 @@ func TestLoadAndUnload(t *testing.T) {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-	fmt.Println(json.ToJsonFormat(stopResult))
+	fmt.Println(json.ToStringFormat(stopResult))
 }
 
 // 启动服务端

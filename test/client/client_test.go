@@ -48,7 +48,7 @@ func userCall(userService pbuser.UserServiceClient) {
 		fmt.Printf("SelectById Error %T %+v\n", err, err)
 		return
 	}
-	logger.Logrus().Infoln("request", json.ToJson(user))
+	logger.Logrus().Infoln("request", json.ToString(user))
 }
 
 // 使用直连的形式请求服务端

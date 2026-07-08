@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"errors"
 
 	"github.com/acexy/golang-toolkit/math/conversion"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
@@ -20,7 +19,7 @@ type nacosBuilder struct {
 
 func (n *nacosBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opts gResolver.BuildOptions) (gResolver.Resolver, error) {
 	if n.client == nil {
-		return nil, errors.New("nacos client is nil")
+		return nil, ErrNacosClientNil
 	}
 	r := &nacosResolver{
 		client:  n.client,
@@ -32,7 +31,7 @@ func (n *nacosBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, o
 	if err == nil && len(instances) > 0 {
 		_ = r.conn.UpdateState(nacosInstanceToState(instances))
 	} else {
-		return nil, errors.New("no instance available")
+		return nil, ErrNoInstanceAvailable
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	n.watchCancel = cancel

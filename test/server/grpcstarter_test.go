@@ -1,107 +1,82 @@
 package server
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/sys"
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
-	"github.com/golang-acexy/starter-grpc/test"
 	"github.com/golang-acexy/starter-grpc/test/pbuser"
-	"github.com/golang-acexy/starter-parent/parent"
 	"google.golang.org/grpc"
 )
 
-var starterLoader *parent.StarterLoader
-var grpcStarter *grpcstarter.GrpcStarter
-
-func init() {
-	logger.SetTraceIdSupplier(test.GetTraceIdSupplier())
-	grpcStarter = &grpcstarter.GrpcStarter{
-		Config: grpcstarter.GrpcConfig{
-			TraceIdSupplier: test.GetTraceIdSupplier(),
-		},
+func stopExistingGrpcServer() {
+	if grpcstarter.RawGrpcServer() != nil {
+		_, _, _ = (&grpcstarter.GrpcStarter{}).Stop(time.Second)
 	}
-
-	// 使用初始化函数
-	//grpcStarter.Config.InitFunc = func(instance *grpc.Server) {
-	//}
-
-	grpcStarter.Config.RegisterService = func(g *grpc.Server) {
-		pbuser.RegisterUserServiceServer(g, &pbuser.UserServiceImpl{})
-	}
-
-	starterLoader = parent.NewStarterLoader([]parent.Starter{grpcStarter})
 }
 
-func TestLoadAndUnload(t *testing.T) {
-	err := starterLoader.Start()
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+func TestGrpcStarterLifecycle(t *testing.T) {
+	stopExistingGrpcServer()
+	defer stopExistingGrpcServer()
+
+	registered := false
+	starter := &grpcstarter.GrpcStarter{
+		Config: grpcstarter.GrpcConfig{
+			ListenAddress: "127.0.0.1:0",
+			RegisterService: func(server *grpc.Server) {
+				registered = true
+				pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
+			},
+		},
 	}
-	time.Sleep(time.Second * 2)
-	stopResult, err := starterLoader.Stop(time.Second * 10)
+
+	instance, err := starter.Start()
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+		t.Fatalf("start grpc starter failed: %v", err)
 	}
-	fmt.Println(json.ToStringFormat(stopResult))
+	if instance == nil || grpcstarter.RawGrpcServer() == nil {
+		t.Fatal("grpc server should be initialized")
+	}
+	if !registered {
+		t.Fatal("register service should be called")
+	}
+
+	gracefully, stopped, err := starter.Stop(time.Second)
+	if err != nil {
+		t.Fatalf("stop grpc starter failed: %v", err)
+	}
+	if !gracefully || !stopped {
+		t.Fatalf("unexpected stop result, gracefully=%v stopped=%v", gracefully, stopped)
+	}
+	if grpcstarter.RawGrpcServer() != nil {
+		t.Fatal("grpc server should be cleared after stop")
+	}
 }
 
-// 启动服务端
-func TestStartSrv(t *testing.T) {
-	err := starterLoader.Start()
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+func TestGrpcStarterRejectsDuplicateServer(t *testing.T) {
+	stopExistingGrpcServer()
+	defer stopExistingGrpcServer()
+
+	first := &grpcstarter.GrpcStarter{Config: grpcstarter.GrpcConfig{ListenAddress: "127.0.0.1:0"}}
+	if _, err := first.Start(); err != nil {
+		t.Fatalf("start first grpc server failed: %v", err)
 	}
-	sys.ShutdownHolding()
+	defer first.Stop(time.Second)
+
+	second := &grpcstarter.GrpcStarter{Config: grpcstarter.GrpcConfig{ListenAddress: "127.0.0.1:0"}}
+	_, err := second.Start()
+	if !errors.Is(err, grpcstarter.ErrGrpcServerAlreadyStarted) {
+		t.Fatalf("expected ErrGrpcServerAlreadyStarted, got %v", err)
+	}
 }
 
-// 启动一批服务端 8082 - 8085
-func TestStartMoreSrv(t *testing.T) {
+func TestGrpcStarterStopBeforeStart(t *testing.T) {
+	stopExistingGrpcServer()
 
-	registerService := func(instance *grpc.Server) {
-		pbuser.RegisterUserServiceServer(instance, &pbuser.UserServiceImpl{})
+	starter := &grpcstarter.GrpcStarter{}
+	_, _, err := starter.Stop(time.Second)
+	if !errors.Is(err, grpcstarter.ErrGrpcServerNotStarted) {
+		t.Fatalf("expected ErrGrpcServerNotStarted, got %v", err)
 	}
-
-	gModule1 := &grpcstarter.GrpcStarter{
-		Config: grpcstarter.GrpcConfig{
-			RegisterService: registerService,
-			ListenAddress:   ":8082",
-		},
-	}
-
-	gModule2 := &grpcstarter.GrpcStarter{
-		Config: grpcstarter.GrpcConfig{
-			RegisterService: registerService,
-			ListenAddress:   ":8083",
-		},
-	}
-
-	gModule3 := &grpcstarter.GrpcStarter{
-		Config: grpcstarter.GrpcConfig{
-			RegisterService: registerService,
-			ListenAddress:   ":8084",
-		},
-	}
-
-	gModule4 := &grpcstarter.GrpcStarter{
-		Config: grpcstarter.GrpcConfig{
-			RegisterService: registerService,
-			ListenAddress:   ":8085",
-		},
-	}
-	starterLoader.AddStarter(gModule1, gModule2, gModule3, gModule4)
-
-	err := starterLoader.Start()
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
-	}
-	sys.ShutdownHolding()
 }

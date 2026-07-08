@@ -3,6 +3,7 @@ package grpcstarter
 import (
 	"context"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/golang-acexy/starter-parent/parent"
@@ -13,7 +14,7 @@ import (
 const traceIdKey = "trace-id"
 
 var grpcServer *grpc.Server
-var supplier TraceIdSupplier
+var grpcServerLock sync.RWMutex
 
 type TraceIdSupplier interface {
 	SetTraceId(traceId string)
@@ -52,16 +53,6 @@ func (g *GrpcStarter) getConfig() *GrpcConfig {
 		if config.ListenAddress == "" {
 			config.ListenAddress = ":8081"
 		}
-		// 注册用户服务实现
-		if config.RegisterService != nil {
-			if config.TraceIdSupplier != nil {
-				supplier = config.TraceIdSupplier
-				grpcServer = grpc.NewServer(grpc.UnaryInterceptor(serverTraceInterceptor))
-			} else {
-				grpcServer = grpc.NewServer()
-			}
-			config.RegisterService(grpcServer)
-		}
 		g.config = &config
 	}
 	return g.config
@@ -79,38 +70,64 @@ func (g *GrpcStarter) Setting() *parent.Setting {
 	})
 }
 
-func serverTraceInterceptor(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-	md, _ := metadata.FromIncomingContext(ctx)
-	if vals := md.Get(traceIdKey); len(vals) > 0 {
-		supplier.SetTraceId(vals[0])
+func serverTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		md, _ := metadata.FromIncomingContext(ctx)
+		if vals := md.Get(traceIdKey); len(vals) > 0 && traceIdSupplier != nil {
+			traceIdSupplier.SetTraceId(vals[0])
+		}
+		return handler(ctx, req)
 	}
-	return handler(ctx, req)
 }
 
 func (g *GrpcStarter) Start() (any, error) {
 	config := g.getConfig()
+	grpcServerLock.Lock()
+	if grpcServer != nil {
+		server := grpcServer
+		grpcServerLock.Unlock()
+		return server, ErrGrpcServerAlreadyStarted
+	}
+	var server *grpc.Server
+	if config.TraceIdSupplier != nil {
+		server = grpc.NewServer(grpc.UnaryInterceptor(serverTraceInterceptor(config.TraceIdSupplier)))
+	} else {
+		server = grpc.NewServer()
+	}
+	if config.RegisterService != nil {
+		config.RegisterService(server)
+	}
+	grpcServer = server
+	grpcServerLock.Unlock()
+
 	lis, err := net.Listen(config.Network, config.ListenAddress)
 	if err != nil {
+		clearGrpcServer(server)
 		return nil, err
 	}
-	errChn := make(chan error)
+	errChn := make(chan error, 1)
 	go func() {
-		if err = grpcServer.Serve(lis); err != nil {
-			errChn <- err
+		if serveErr := server.Serve(lis); serveErr != nil {
+			errChn <- serveErr
 		}
 	}()
 	select {
 	case <-time.After(time.Second):
-		return grpcServer, nil
+		return server, nil
 	case err = <-errChn:
-		return grpcServer, err
+		clearGrpcServer(server)
+		return server, err
 	}
 }
 
 func (g *GrpcStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
-	done := make(chan struct{})
+	server := RawGrpcServer()
+	if server == nil {
+		return false, true, ErrGrpcServerNotStarted
+	}
+	done := make(chan struct{}, 1)
 	go func() {
-		grpcServer.GracefulStop()
+		server.GracefulStop()
 		done <- struct{}{}
 	}()
 	select {
@@ -118,13 +135,26 @@ func (g *GrpcStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 		gracefully = true
 		stopped = true
 	case <-time.After(maxWaitTime):
+		server.Stop()
 		gracefully = false
 		stopped = true
+		err = ErrGrpcStopTimeout
 	}
+	clearGrpcServer(server)
 	return
 }
 
 // RawGrpcServer 获取原始grpc server实例
 func RawGrpcServer() *grpc.Server {
+	grpcServerLock.RLock()
+	defer grpcServerLock.RUnlock()
 	return grpcServer
+}
+
+func clearGrpcServer(server *grpc.Server) {
+	grpcServerLock.Lock()
+	defer grpcServerLock.Unlock()
+	if grpcServer == server {
+		grpcServer = nil
+	}
 }

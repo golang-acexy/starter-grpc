@@ -12,17 +12,17 @@ require (
 )
 
 require (
-	github.com/alibabacloud-go/alibabacloud-gateway-pop v0.1.0 // indirect
+	github.com/alibabacloud-go/alibabacloud-gateway-pop v0.1.4 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
 	github.com/alibabacloud-go/darabonba-array v0.1.0 // indirect
 	github.com/alibabacloud-go/darabonba-encode-util v0.0.2 // indirect
 	github.com/alibabacloud-go/darabonba-map v0.0.2 // indirect
-	github.com/alibabacloud-go/darabonba-openapi/v2 v2.1.12 // indirect
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.3 // indirect
 	github.com/alibabacloud-go/darabonba-signature-util v0.0.7 // indirect
 	github.com/alibabacloud-go/darabonba-string v1.0.2 // indirect
 	github.com/alibabacloud-go/debug v1.0.1 // indirect
 	github.com/alibabacloud-go/endpoint-util v1.1.1 // indirect
-	github.com/alibabacloud-go/kms-20160120/v3 v3.3.1 // indirect
+	github.com/alibabacloud-go/kms-20160120/v3 v3.4.0 // indirect
 	github.com/alibabacloud-go/openapi-util v0.1.2 // indirect
 	github.com/alibabacloud-go/tea v1.5.2 // indirect
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.9 // indirect
@@ -70,7 +70,7 @@ require (
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
-	golang.org/x/time v0.13.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260706201446-f0a921348800 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect

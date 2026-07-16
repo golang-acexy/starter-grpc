@@ -2,66 +2,93 @@ package client
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/math/random"
-	"github.com/acexy/golang-toolkit/sys"
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
 	"github.com/golang-acexy/starter-grpc/test"
 	"github.com/golang-acexy/starter-grpc/test/pbuser"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 )
 
-var userService pbuser.UserServiceClient
-
-func doRequest(ctx context.Context, gClient *grpcstarter.GrpcClient) {
-	if userService == nil {
-		userService = pbuser.NewUserServiceClient(gClient.GetRawConn())
-	}
-	go func() {
-		for {
-			userCall(userService)
-			time.Sleep(time.Second)
-			select {
-			case <-ctx.Done():
-				_ = gClient.CloseConn()
-				break
-			default:
-			}
-		}
-	}()
-}
-
-func userCall(userService pbuser.UserServiceClient) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	user, err := userService.QueryById(ctx, &pbuser.Request{Id: uint64(random.RandInt(10))})
+func nextLocalAddress(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		statusError := status.Convert(err)
-		fmt.Printf("%+v\n", statusError.Code())
-		fmt.Printf("SelectById Error %T %+v\n", err, err)
-		return
+		t.Fatalf("allocate local address failed: %v", err)
 	}
-	logger.Logrus().Infoln("request", json.ToString(user))
+	address := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatalf("close local address listener failed: %v", err)
+	}
+	return address
 }
 
-// 使用直连的形式请求服务端
+func startUserGrpcServer(t *testing.T) string {
+	t.Helper()
+	stopExistingGrpcServer(t)
+
+	address := nextLocalAddress(t)
+	starter := &grpcstarter.GrpcStarter{
+		Config: grpcstarter.GrpcConfig{
+			ListenAddress:   address,
+			TraceIdSupplier: test.GetTraceIdSupplier(),
+			RegisterService: func(server *grpc.Server) {
+				pbuser.RegisterUserServiceServer(server, &pbuser.UserServiceImpl{})
+			},
+		},
+	}
+	if _, err := starter.Start(); err != nil {
+		t.Fatalf("start grpc server failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _, _ = starter.Stop(time.Second)
+	})
+	return address
+}
+
+func stopExistingGrpcServer(t *testing.T) {
+	t.Helper()
+	if grpcstarter.RawGrpcServer() != nil {
+		if _, _, err := (&grpcstarter.GrpcStarter{}).Stop(time.Second); err != nil {
+			t.Fatalf("stop existing grpc server failed: %v", err)
+		}
+	}
+}
+
+func assertUserServiceCall(t *testing.T, conn *grpcstarter.GrpcClient) {
+	t.Helper()
+	client := pbuser.NewUserServiceClient(conn.GetRawConn())
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	logger.Logrus().Debugln("query user service")
+	response, err := client.QueryById(ctx, &pbuser.Request{Id: 1})
+	if err != nil {
+		t.Fatalf("query user service failed: %v", err)
+	}
+	if len(response.GetUsers()) == 0 {
+		t.Fatal("query user service should return users")
+	}
+}
+
+// TestCallServer verifies direct client/server communication.
 func TestCallServer(t *testing.T) {
-	logger.SetTraceIdSupplier(test.GetTraceIdSupplier())
+	address := startUserGrpcServer(t)
+	logger.SetTraceIdSupplier(test.GetTraceIdSupplier()) // 实现traceId传递
 	conn, err := grpcstarter.NewClientConnWithTraceSupplier(
-		"localhost:8081",
+		address,
 		test.GetTraceIdSupplier(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		t.Fatalf("create direct grpc client failed: %v", err)
 	}
-	doRequest(context.Background(), conn)
-	sys.ShutdownHolding()
+	t.Cleanup(func() {
+		_ = conn.CloseConn()
+	})
+	assertUserServiceCall(t, conn)
 }

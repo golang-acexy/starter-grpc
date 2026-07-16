@@ -1,10 +1,9 @@
 package client
 
 import (
-	"context"
-	"fmt"
+	"os"
+	"strconv"
 	"testing"
-	"time"
 
 	"github.com/golang-acexy/starter-grpc/grpcstarter"
 	"github.com/golang-acexy/starter-grpc/grpcstarter/resolver"
@@ -15,38 +14,64 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// TestCallServerWithNacosResolver verifies Nacos resolver integration.
+//
+// It requires an existing Nacos service instance and is disabled by default:
+// STARTER_GRPC_NACOS_TEST=1 STARTER_GRPC_NACOS_SERVICE=go go test ./test/client -run TestCallServerWithNacosResolver
 func TestCallServerWithNacosResolver(t *testing.T) {
-	client, _ := clients.NewNamingClient(vo.NacosClientParam{
-		ServerConfigs: []constant.ServerConfig{
-			{
-				IpAddr: "localhost",
-				Port:   8848,
-			},
-		},
+	if os.Getenv("STARTER_GRPC_NACOS_TEST") != "1" {
+		t.Skip("set STARTER_GRPC_NACOS_TEST=1 to run nacos resolver integration test")
+	}
+
+	port := uint64(8848)
+	if rawPort := os.Getenv("STARTER_GRPC_NACOS_PORT"); rawPort != "" {
+		parsed, err := strconv.ParseUint(rawPort, 10, 64)
+		if err != nil {
+			t.Fatalf("parse STARTER_GRPC_NACOS_PORT failed: %v", err)
+		}
+		port = parsed
+	}
+	host := os.Getenv("STARTER_GRPC_NACOS_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	group := os.Getenv("STARTER_GRPC_NACOS_GROUP")
+	if group == "" {
+		group = "DEFAULT_GROUP"
+	}
+	service := os.Getenv("STARTER_GRPC_NACOS_SERVICE")
+	if service == "" {
+		service = "go"
+	}
+
+	client, err := clients.NewNamingClient(vo.NacosClientParam{
+		ServerConfigs: []constant.ServerConfig{{IpAddr: host, Port: port}},
 		ClientConfig: &constant.ClientConfig{
-			//NamespaceId:         "public",
-			Username:            "nacos",
-			Password:            "nacos",
-			LogLevel:            "debug",
+			Username:            os.Getenv("STARTER_GRPC_NACOS_USERNAME"),
+			Password:            os.Getenv("STARTER_GRPC_NACOS_PASSWORD"),
+			LogLevel:            "warn",
 			LogDir:              "./",
 			CacheDir:            "./",
 			NotLoadCacheAtStart: true,
 		},
 	})
+	if err != nil {
+		t.Fatalf("create nacos client failed: %v", err)
+	}
 
-	nacosResolver := resolver.NewNacosResolver(client, "DEFAULT_GROUP")
+	nacosResolver := resolver.NewNacosResolver(client, group)
 	conn, err := grpcstarter.NewClientConnWithResolver(
-		resolver.NacosScheme+":///go",
+		resolver.NacosScheme+":///"+service,
 		nacosResolver,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
-		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
 	)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		t.Fatalf("create nacos resolver grpc client failed: %v", err)
 	}
-	for {
-		doRequest(context.Background(), conn)
-		time.Sleep(time.Second * 2)
-	}
+	t.Cleanup(func() {
+		_ = conn.CloseConn()
+	})
 
+	assertUserServiceCall(t, conn)
 }

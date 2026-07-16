@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	etcdClient "go.etcd.io/etcd/client/v3"
@@ -24,7 +25,7 @@ func (b etcdBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opt
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	manager, err := endpoints.NewManager(r.client, r.target)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "etcdResolver: failed to new endpoint manager: %s", err)
+		return nil, status.Error(codes.InvalidArgument, fmt.Errorf("%w: %w", ErrEtcdEndpointManager, err).Error())
 	}
 	all, err := manager.List(context.Background())
 	if err == nil && len(all) > 0 {
@@ -36,7 +37,7 @@ func (b etcdBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opt
 	}
 	r.etcdWatch, err = manager.NewWatchChannel(r.ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "etcdResolver: failed to new watch channer: %s", err)
+		return nil, status.Error(codes.Internal, fmt.Errorf("%w: %w", ErrEtcdWatchChannel, err).Error())
 	}
 	r.waitGroup.Add(1)
 	go r.watch()

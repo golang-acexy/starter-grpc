@@ -23,7 +23,7 @@ func NewClientConnWithTraceSupplier(target string, traceIdSupplier TraceIdSuppli
 		return nil, err
 	}
 	return &GrpcClient{
-		gRpcRawClientCoon: conn,
+		grpcRawClientConn: conn,
 	}, nil
 }
 
@@ -77,13 +77,13 @@ func clientTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryClientInt
 }
 
 type GrpcClient struct {
-	gRpcRawClientCoon *grpc.ClientConn
+	grpcRawClientConn *grpc.ClientConn
 }
 
 func (g *GrpcClient) GetRawConn() *grpc.ClientConn {
-	return g.gRpcRawClientCoon
+	return g.grpcRawClientConn
 }
 
 func (g *GrpcClient) CloseConn() error {
-	return g.gRpcRawClientCoon.Close()
+	return g.grpcRawClientConn.Close()
 }

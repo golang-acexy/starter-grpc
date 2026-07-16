@@ -1,84 +1,111 @@
 # starter-grpc
 
-基于`google.golang.org/grpc`封装的gRPC服务端/客户端组件
+`starter-grpc` is the gRPC starter for the golang-acexy starter/cloud ecosystem. It wraps `google.golang.org/grpc` and provides server lifecycle management, client creation, trace-id propagation, and resolver-based service discovery.
 
----
+## Ecosystem Role
 
-#### 功能说明
+This module provides the RPC transport layer. It can operate with direct targets or resolver implementations, and it composes with `starter-nacos` when services use Nacos registration and discovery.
 
-支持快速开启服务端/客户端，支持Client模式使用resolver服务发现模式
+## Requirements
 
-- etcdResolver 模式
+Current module Go version: `1.25.8`.
 
-  - etcd 动态服务发现
+## Installation
 
-    ```go
-    // 使用动态服务器路由列表(基于etcd) 启动 grpcstarter_test.go -> TestStartMoreSrv 启动一批服务端
-    func TestCallServerWithEtcdResolver(t *testing.T) {
-    etcdSrv := "http://localhost:2379"
-    
-        etcdResolver := &etcdResolver.Etcd{EtcdUrls: []string{etcdSrv}}
-        conn, err := grpcstarter.NewClientConnWithResolver(etcdResolver.EtcdScheme+":///users", etcdResolver,
-            grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
-            grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
-        )
-    
-        if err != nil {
-            fmt.Printf("%v\n", err)
-              return
-        }
-    
-        // 开启一个异步协程，5秒后，将相关服务端实例注册到etcd，测试本客户端是否可以感知并开始请求
-        go func() {
-            // 也可以通过直接操作etcd将相关服务端进行注册
-            // etcdctl get "" --prefix=true 查看所有key
-            // 手动注册服务端实例至etcd
-            // etcdctl put "users/1" '{"Addr":"localhost:8085"}'
-            // etcdctl put "users/2" '{"Addr":"localhost:8084"}'
-            // etcdctl put "users/3" '{"Addr":"localhost:8083"}'
-            ctx, cancel := context.WithCancel(context.Background())
-            time.Sleep(time.Second * 5)
-            fmt.Println("register new instance")
-            etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "1", "localhost:8085", 3)
-            etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "2", "localhost:8084", 3)
-            etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "3", "localhost:8083", 3)
-            etcdResolver.RegisterEtcdSrvInstance(ctx, "users", "4", "localhost:8082", 10)
-            time.Sleep(time.Second * 40)
-            fmt.Println("stop instance keepalive")
-            cancel()
-        }()
-    
-        ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-        defer cancel()
-        doRequest(ctx, conn)
-        <-ctx.Done()
-    }
-    ```    
+```bash
+go get github.com/golang-acexy/starter-grpc
+```
 
-  - static 静态服务列表配置
+## Server Design
 
-    ````go
-    // 使用静态服务端列表 启动 grpcstarter_test.go -> TestStartMoreSrv 启动一批服务端
-    func TestCallServerWithStaticResolver(t *testing.T) {
-      conn, err := grpcstarter.NewClientConnWithResolver(etcdResolver.StaticScheme+":///users", etcdResolver.Static{Addresses: map[string][]string{
-        "users": {
-          "127.0.0.1:8085",
-          "127.0.0.1:8084",
-          "127.0.0.1:8083",
-          "127.0.0.1:8082",
-          "127.0.0.1:8081",
+The server side is intentionally singleton-based. One application process owns one `grpc.Server`; multiple business services should be registered into that server through `GrpcConfig.RegisterService`. Starting another `GrpcStarter` in the same process returns `ErrGrpcServerAlreadyStarted`.
+
+This matches the normal service model: one process exposes one gRPC endpoint, while multiple instances should be represented by multiple processes, not multiple listeners inside one process.
+
+## Server Usage
+
+```go
+starter := &grpcstarter.GrpcStarter{
+    Config: grpcstarter.GrpcConfig{
+        Network:       "tcp",
+        ListenAddress: ":8081",
+        RegisterService: func(server *grpc.Server) {
+            // pb.RegisterUserServiceServer(server, userService)
+            // pb.RegisterOrderServiceServer(server, orderService)
         },
-      }},
-        grpc.WithTransportCredentials(insecure.NewCredentials()),               // 免认证
-        grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`), // 使用负载策略 (如果不使用负载策略则不会在服务器列表中使用负载功能，可能一直请求同一个服务器)
-      )
-      if err != nil {
-        fmt.Printf("%v\n", err)
-      }
+    },
+}
 
-      ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-      defer cancel()
-      doRequest(ctx, conn)
-      <-ctx.Done()
-    }
-    ````
+loader := parent.InitStarterLoader([]parent.Starter{starter})
+if err := loader.Start(); err != nil {
+    panic(err)
+}
+```
+
+Use `InitFunc` when initialization needs the raw `*grpc.Server` after startup. Use `TraceIdSupplier` to bind trace-id propagation through unary interceptors.
+
+## Client Usage
+
+Direct connection:
+
+```go
+client, err := grpcstarter.NewClientConn(
+    "localhost:8081",
+    grpc.WithTransportCredentials(insecure.NewCredentials()),
+)
+```
+
+Static resolver:
+
+```go
+r := resolver.NewStaticResolver([]string{
+    "127.0.0.1:8081",
+    "127.0.0.1:8082",
+})
+
+client, err := grpcstarter.NewClientConnWithResolver(
+    resolver.StaticScheme+":///users",
+    r,
+    grpc.WithTransportCredentials(insecure.NewCredentials()),
+    grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
+)
+```
+
+Etcd and Nacos resolvers are available through `resolver.NewEtcdResolver(...)` and `resolver.NewNacosResolver(...)` for dynamic discovery.
+
+## Common API
+
+- `GrpcStarter.Start()` starts the singleton gRPC server.
+- `GrpcStarter.Stop(maxWaitTime)` gracefully stops the server, then forces stop on timeout.
+- `RawGrpcServer()` returns the singleton raw server.
+- `NewClientConn(...)` creates a direct client connection.
+- `NewClientConnWithTraceSupplier(...)` creates a direct client with trace propagation.
+- `NewClientConnWithResolver(...)` creates a client using service discovery.
+
+## Verification
+
+Direct client/server communication and static resolver communication are covered by default tests:
+
+```bash
+go test ./test/client
+```
+
+Etcd and Nacos resolver tests require external services and are skipped by default:
+
+```bash
+STARTER_GRPC_ETCD_TEST=1 \
+STARTER_GRPC_ETCD_ENDPOINT=http://localhost:2379 \
+go test ./test/client -run TestCallServerWithEtcdResolver
+
+STARTER_GRPC_NACOS_TEST=1 \
+STARTER_GRPC_NACOS_HOST=localhost \
+STARTER_GRPC_NACOS_PORT=8848 \
+STARTER_GRPC_NACOS_SERVICE=go \
+go test ./test/client -run TestCallServerWithNacosResolver
+```
+
+## Lifecycle and Design Notes
+
+Do not create multiple `GrpcStarter` instances to listen on different ports in the same process. Register multiple services into one server instead.
+
+The standard gRPC starter does not allow parent-managed restart after successful shutdown. Client connections are caller-owned and should be closed independently of the server starter.

@@ -2,9 +2,15 @@
 
 `starter-grpc` is the gRPC starter for the golang-acexy starter/cloud ecosystem. It wraps `google.golang.org/grpc` and provides server lifecycle management, client creation, trace-id propagation, and resolver-based service discovery.
 
+## Ecosystem Role
+
+This module provides the RPC transport layer. It can operate with direct targets or resolver implementations, and it composes with `starter-nacos` when services use Nacos registration and discovery.
+
 ## Requirements
 
 Current module Go version: `1.25.8`.
+
+## Installation
 
 ```bash
 go get github.com/golang-acexy/starter-grpc
@@ -98,6 +104,8 @@ STARTER_GRPC_NACOS_SERVICE=go \
 go test ./test/client -run TestCallServerWithNacosResolver
 ```
 
-## Notes
+## Lifecycle and Design Notes
 
 Do not create multiple `GrpcStarter` instances to listen on different ports in the same process. Register multiple services into one server instead.
+
+The standard gRPC starter does not allow parent-managed restart after successful shutdown. Client connections are caller-owned and should be closed independently of the server starter.

@@ -102,8 +102,7 @@ func (r *etcdResolver) Close() {
 }
 
 type Etcd struct {
-	client   *etcdClient.Client
-	managers map[string]endpoints.Manager
+	client *etcdClient.Client
 }
 
 func NewEtcdResolver(client *etcdClient.Client) *Etcd {
@@ -111,6 +110,5 @@ func NewEtcdResolver(client *etcdClient.Client) *Etcd {
 }
 
 func (e *Etcd) NewResolver() (gResolver.Builder, error) {
-	e.managers = make(map[string]endpoints.Manager, 1)
 	return &etcdBuilder{client: e.client}, nil
 }

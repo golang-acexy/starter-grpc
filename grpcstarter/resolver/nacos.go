@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"sync"
 
 	"github.com/acexy/golang-toolkit/math/conversion"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
@@ -11,10 +12,8 @@ import (
 )
 
 type nacosBuilder struct {
-	client      naming_client.INamingClient
-	group       string
-	watchCancel context.CancelFunc
-	closeWatch  chan struct{}
+	client naming_client.INamingClient
+	group  string
 }
 
 func (n *nacosBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, opts gResolver.BuildOptions) (gResolver.Resolver, error) {
@@ -22,10 +21,10 @@ func (n *nacosBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, o
 		return nil, ErrNacosClientNil
 	}
 	r := &nacosResolver{
-		client:  n.client,
-		target:  target.Endpoint(),
-		conn:    cc,
-		builder: n,
+		client: n.client,
+		target: target.Endpoint(),
+		group:  n.group,
+		conn:   cc,
 	}
 	instances, err := n.client.SelectInstances(vo.SelectInstancesParam{ServiceName: target.Endpoint(), GroupName: n.group, HealthyOnly: true})
 	if err == nil && len(instances) > 0 {
@@ -34,21 +33,22 @@ func (n *nacosBuilder) Build(target gResolver.Target, cc gResolver.ClientConn, o
 		return nil, ErrNoInstanceAvailable
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	n.watchCancel = cancel
-	n.closeWatch = make(chan struct{})
+	r.cancel = cancel
+	r.done = make(chan struct{})
 	go func() {
+		defer close(r.done)
 		// 异步监听变化
 		param := &vo.SubscribeParam{ServiceName: target.Endpoint(), GroupName: n.group, SubscribeCallback: func(services []model.Instance, err error) {
 			if err == nil && len(services) > 0 {
 				_ = r.conn.UpdateState(nacosInstanceToState(services))
 			}
 		}}
-		_ = n.client.Subscribe(param)
-		select {
-		case <-ctx.Done():
-			_ = n.client.Unsubscribe(param)
-			n.closeWatch <- struct{}{}
+		if err := n.client.Subscribe(param); err != nil {
+			r.conn.ReportError(err)
+			return
 		}
+		<-ctx.Done()
+		_ = n.client.Unsubscribe(param)
 	}()
 	return r, nil
 }
@@ -68,16 +68,21 @@ func (n *nacosBuilder) Scheme() string {
 type nacosResolver struct {
 	client  naming_client.INamingClient
 	target  string
+	group   string
 	conn    gResolver.ClientConn
-	builder *nacosBuilder
+	cancel  context.CancelFunc
+	done    chan struct{}
+	closeOnce sync.Once
 }
 
 func (n *nacosResolver) ResolveNow(options gResolver.ResolveNowOptions) {
 }
 
 func (n *nacosResolver) Close() {
-	n.builder.watchCancel()
-	<-n.builder.closeWatch
+	n.closeOnce.Do(func() {
+		n.cancel()
+		<-n.done
+	})
 }
 
 type Nacos struct {

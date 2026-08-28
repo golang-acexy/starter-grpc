@@ -58,7 +58,7 @@ func NewClientConnWithResolverTraceSupplier(target string, traceIdSupplier Trace
 }
 
 func clientTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	return func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		metadataCtx, ok := metadata.FromOutgoingContext(ctx)
 		if !ok {
 			metadataCtx = metadata.New(nil)

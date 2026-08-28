@@ -8,7 +8,7 @@ This module provides the RPC transport layer. It can operate with direct targets
 
 ## Requirements
 
-Current module Go version: `1.25.8`.
+Current module Go version: `1.26.7`.
 
 ## Installation
 
@@ -18,7 +18,7 @@ go get github.com/golang-acexy/starter-grpc
 
 ## Server Design
 
-The server side is intentionally singleton-based. One application process owns one `grpc.Server`; multiple business services should be registered into that server through `GrpcConfig.RegisterService`. Starting another `GrpcStarter` in the same process returns `ErrGrpcServerAlreadyStarted`.
+The server side is intentionally singleton-based. One application process owns one `grpc.Server`; multiple business services should be registered into that server through `GrpcConfig.RegisterService`. The active server is published as an immutable runtime snapshot after service registration and listener creation. Starting another `GrpcStarter` in the same process returns `ErrGrpcServerAlreadyStarted`.
 
 This matches the normal service model: one process exposes one gRPC endpoint, while multiple instances should be represented by multiple processes, not multiple listeners inside one process.
 
@@ -72,6 +72,8 @@ client, err := grpcstarter.NewClientConnWithResolver(
 ```
 
 Etcd and Nacos resolvers are available through `resolver.NewEtcdResolver(...)` and `resolver.NewNacosResolver(...)` for dynamic discovery.
+
+Static resolver updates are concurrency-safe and are delivered to every active client connection created from the resolver. Each Nacos-backed resolver owns an independent subscription lifecycle, so closing one client does not cancel another client's watch.
 
 ## Common API
 

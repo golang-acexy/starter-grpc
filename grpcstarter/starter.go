@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-acexy/starter-parent/parent"
@@ -13,8 +14,23 @@ import (
 
 const traceIdKey = "trace-id"
 
-var grpcServer *grpc.Server
-var grpcServerLock sync.RWMutex
+var grpcRuntimeState atomic.Pointer[grpcRuntime]
+var grpcLifecycleLock sync.Mutex
+var grpcState grpcLifecycleState
+
+type grpcRuntime struct {
+	server *grpc.Server
+	done   <-chan struct{}
+}
+
+type grpcLifecycleState uint8
+
+const (
+	grpcStopped grpcLifecycleState = iota
+	grpcStarting
+	grpcRunning
+	grpcStopping
+)
 
 type TraceIdSupplier interface {
 	SetTraceId(traceId string)
@@ -36,11 +52,12 @@ type GrpcStarter struct {
 	Config      GrpcConfig
 	LazyConfig  func() GrpcConfig
 	config      *GrpcConfig
+	configOnce  sync.Once
 	GrpcSetting *parent.Setting
 }
 
 func (g *GrpcStarter) getConfig() *GrpcConfig {
-	if g.config == nil {
+	g.configOnce.Do(func() {
 		var config GrpcConfig
 		if g.LazyConfig != nil {
 			config = g.LazyConfig()
@@ -54,7 +71,7 @@ func (g *GrpcStarter) getConfig() *GrpcConfig {
 			config.ListenAddress = ":8081"
 		}
 		g.config = &config
-	}
+	})
 	return g.config
 }
 
@@ -82,12 +99,26 @@ func serverTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryServerInt
 
 func (g *GrpcStarter) Start() (any, error) {
 	config := g.getConfig()
-	grpcServerLock.Lock()
-	if grpcServer != nil {
-		server := grpcServer
-		grpcServerLock.Unlock()
-		return server, ErrGrpcServerAlreadyStarted
+	grpcLifecycleLock.Lock()
+	if grpcState != grpcStopped {
+		runtime := grpcRuntimeState.Load()
+		grpcLifecycleLock.Unlock()
+		if runtime != nil {
+			return runtime.server, ErrGrpcServerAlreadyStarted
+		}
+		return nil, ErrGrpcServerAlreadyStarted
 	}
+	grpcState = grpcStarting
+	grpcLifecycleLock.Unlock()
+	started := false
+	defer func() {
+		if !started {
+			grpcLifecycleLock.Lock()
+			grpcState = grpcStopped
+			grpcLifecycleLock.Unlock()
+		}
+	}()
+
 	var server *grpc.Server
 	if config.TraceIdSupplier != nil {
 		server = grpc.NewServer(grpc.UnaryInterceptor(serverTraceInterceptor(config.TraceIdSupplier)))
@@ -97,64 +128,77 @@ func (g *GrpcStarter) Start() (any, error) {
 	if config.RegisterService != nil {
 		config.RegisterService(server)
 	}
-	grpcServer = server
-	grpcServerLock.Unlock()
 
 	lis, err := net.Listen(config.Network, config.ListenAddress)
 	if err != nil {
-		clearGrpcServer(server)
 		return nil, err
 	}
-	errChn := make(chan error, 1)
+	done := make(chan struct{})
+	runtime := &grpcRuntime{server: server, done: done}
+	grpcLifecycleLock.Lock()
+	grpcRuntimeState.Store(runtime)
+	grpcState = grpcRunning
+	grpcLifecycleLock.Unlock()
+	started = true
+
 	go func() {
-		if serveErr := server.Serve(lis); serveErr != nil {
-			errChn <- serveErr
-		}
+		defer close(done)
+		_ = server.Serve(lis)
+		clearGrpcServer(runtime)
 	}()
-	select {
-	case <-time.After(time.Second):
-		return server, nil
-	case err = <-errChn:
-		clearGrpcServer(server)
-		return server, err
-	}
+	return server, nil
 }
 
 func (g *GrpcStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
-	server := RawGrpcServer()
-	if server == nil {
+	grpcLifecycleLock.Lock()
+	runtime := grpcRuntimeState.Load()
+	if grpcState != grpcRunning || runtime == nil {
+		grpcLifecycleLock.Unlock()
 		return false, true, ErrGrpcServerNotStarted
 	}
-	done := make(chan struct{}, 1)
+	grpcRuntimeState.Store(nil)
+	grpcState = grpcStopping
+	grpcLifecycleLock.Unlock()
+
+	done := make(chan struct{})
 	go func() {
-		server.GracefulStop()
-		done <- struct{}{}
+		defer close(done)
+		runtime.server.GracefulStop()
 	}()
+	timer := time.NewTimer(maxWaitTime)
+	defer timer.Stop()
 	select {
 	case <-done:
 		gracefully = true
 		stopped = true
-	case <-time.After(maxWaitTime):
-		server.Stop()
+	case <-timer.C:
+		runtime.server.Stop()
 		gracefully = false
 		stopped = true
 		err = ErrGrpcStopTimeout
 	}
-	clearGrpcServer(server)
+	grpcLifecycleLock.Lock()
+	grpcState = grpcStopped
+	grpcLifecycleLock.Unlock()
 	return
 }
 
 // RawGrpcServer 获取原始grpc server实例
 func RawGrpcServer() *grpc.Server {
-	grpcServerLock.RLock()
-	defer grpcServerLock.RUnlock()
-	return grpcServer
+	runtime := grpcRuntimeState.Load()
+	if runtime == nil {
+		return nil
+	}
+	return runtime.server
 }
 
-func clearGrpcServer(server *grpc.Server) {
-	grpcServerLock.Lock()
-	defer grpcServerLock.Unlock()
-	if grpcServer == server {
-		grpcServer = nil
+func clearGrpcServer(runtime *grpcRuntime) {
+	if !grpcRuntimeState.CompareAndSwap(runtime, nil) {
+		return
 	}
+	grpcLifecycleLock.Lock()
+	if grpcState == grpcRunning {
+		grpcState = grpcStopped
+	}
+	grpcLifecycleLock.Unlock()
 }

@@ -32,27 +32,39 @@ const (
 	grpcStopping
 )
 
+// TraceIdSupplier bridges unary trace metadata to application-owned trace storage.
+// Implementations must isolate concurrent RPCs and manage cleanup; streaming RPCs are not traced.
 type TraceIdSupplier interface {
+	// SetTraceId receives the first incoming trace-id; missing IDs do not clear existing state.
 	SetTraceId(traceId string)
+	// GetTraceId returns the outgoing trace ID; empty leaves existing outgoing metadata unchanged.
 	GetTraceId() string
 }
 
+// GrpcConfig configures the process-wide server and unary trace integration.
 type GrpcConfig struct {
-	// grpc listener
-	Network       string
+	// Network defaults to tcp when empty.
+	Network string
+	// ListenAddress defaults to :8081 when empty.
 	ListenAddress string
-	InitFunc      func(instance *grpc.Server)
-	// 链路追踪TraceId日志实现
+	// InitFunc is invoked by the default parent post-start callback, not by direct Start calls.
+	InitFunc func(instance *grpc.Server)
+	// TraceIdSupplier enables unary tracing when nonnil.
 	TraceIdSupplier TraceIdSupplier
-	// 注册服务
+	// RegisterService registers protobuf services synchronously before the listener is bound.
 	RegisterService func(g *grpc.Server)
 }
 
+// GrpcStarter manages one process-wide gRPC server under the parent lifecycle.
+// Configuration is resolved once; callers should sequence normal startup and shutdown.
 type GrpcStarter struct {
-	Config      GrpcConfig
-	LazyConfig  func() GrpcConfig
-	config      *GrpcConfig
-	configOnce  sync.Once
+	// Config is used when LazyConfig is nil.
+	Config GrpcConfig
+	// LazyConfig takes precedence and is evaluated at most once.
+	LazyConfig func() GrpcConfig
+	config     *GrpcConfig
+	configOnce sync.Once
+	// GrpcSetting overrides defaults, including the callback that invokes InitFunc.
 	GrpcSetting *parent.Setting
 }
 
@@ -75,6 +87,7 @@ func (g *GrpcStarter) getConfig() *GrpcConfig {
 	return g.config
 }
 
+// Setting returns an override or no-restart defaults with priority one and a 30-second wait.
 func (g *GrpcStarter) Setting() *parent.Setting {
 	if g.GrpcSetting != nil {
 		return g.GrpcSetting
@@ -97,6 +110,8 @@ func serverTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryServerInt
 	}
 }
 
+// Start binds the listener and returns the raw server; serving begins asynchronously.
+// Only one server can run per process. Startup does not register discovery endpoints.
 func (g *GrpcStarter) Start() (any, error) {
 	config := g.getConfig()
 	grpcLifecycleLock.Lock()
@@ -149,6 +164,8 @@ func (g *GrpcStarter) Start() (any, error) {
 	return server, nil
 }
 
+// Stop drains RPCs until maxWaitTime, then forces termination and returns ErrGrpcStopTimeout.
+// Raw access becomes unavailable immediately; caller-owned client connections are unaffected.
 func (g *GrpcStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
 	grpcLifecycleLock.Lock()
 	runtime := grpcRuntimeState.Load()
@@ -183,7 +200,8 @@ func (g *GrpcStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool,
 	return
 }
 
-// RawGrpcServer 获取原始grpc server实例
+// RawGrpcServer returns the starter-owned server, or nil outside the running state.
+// Register services through RegisterService; the starter owns server shutdown.
 func RawGrpcServer() *grpc.Server {
 	runtime := grpcRuntimeState.Load()
 	if runtime == nil {

@@ -18,7 +18,7 @@ go get github.com/golang-acexy/starter-grpc
 
 ## Server Design
 
-The server side is intentionally singleton-based. One application process owns one `grpc.Server`; multiple business services should be registered into that server through `GrpcConfig.RegisterService`. The active server is published as an immutable runtime snapshot after service registration and listener creation. Starting another `GrpcStarter` in the same process returns `ErrGrpcServerAlreadyStarted`.
+The server side is intentionally singleton-based. One application process owns one `grpc.Server`; multiple business services should be registered into that server through `GrpcConfig.RegisterService`. Starting another `GrpcStarter` in the same process returns `ErrGrpcServerAlreadyStarted`.
 
 This matches the normal service model: one process exposes one gRPC endpoint, while multiple instances should be represented by multiple processes, not multiple listeners inside one process.
 
@@ -42,7 +42,7 @@ if err := loader.Start(); err != nil {
 }
 ```
 
-Use `InitFunc` when initialization needs the raw `*grpc.Server` after startup. Use `TraceIdSupplier` to bind trace-id propagation through unary interceptors.
+Use `InitFunc` when initialization needs the raw `*grpc.Server` after startup. Use `TraceIdSupplier` to bind trace-id propagation through unary interceptors. Its implementation must isolate concurrent RPC trace state and manage cleanup. Tracing is chained with caller client interceptors and does not cover streaming RPCs.
 
 ## Client Usage
 
@@ -53,6 +53,10 @@ client, err := grpcstarter.NewClientConn(
     "localhost:8081",
     grpc.WithTransportCredentials(insecure.NewCredentials()),
 )
+if err != nil {
+    return err
+}
+defer client.CloseConn()
 ```
 
 Static resolver:
@@ -69,11 +73,17 @@ client, err := grpcstarter.NewClientConnWithResolver(
     grpc.WithTransportCredentials(insecure.NewCredentials()),
     grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
 )
+if err != nil {
+    return err
+}
+defer client.CloseConn()
 ```
 
 Etcd and Nacos resolvers are available through `resolver.NewEtcdResolver(...)` and `resolver.NewNacosResolver(...)` for dynamic discovery.
 
-Static resolver updates are concurrency-safe and are delivered to every active client connection created from the resolver. Each Nacos-backed resolver owns an independent subscription lifecycle, so closing one client does not cancel another client's watch.
+Static resolver updates are concurrency-safe and are delivered to every active client connection created from the resolver. Each Nacos-backed resolver owns an independent subscription lifecycle, so closing one gRPC connection does not cancel another connection's watch. Nacos updates retain only healthy, enabled instances with positive weight, and received empty updates withdraw prior addresses. Enable Nacos SDK `UpdateCacheWhenEmpty` to receive last-instance removal notifications. IPv6 addresses are supported.
+
+Etcd resolvers use the endpoint watch's initial snapshot and subsequent updates. Nacos and Etcd SDK clients remain caller-owned: close gRPC connections first, then close shared discovery clients. This changes the previous Etcd behavior, which closed the supplied client when a resolver closed.
 
 ## Common API
 
@@ -86,11 +96,13 @@ Static resolver updates are concurrency-safe and are delivered to every active c
 
 ## Verification
 
-Direct client/server communication and static resolver communication are covered by default tests:
+Package-level regression tests use in-memory RPC transport and fake discovery services; no Nacos or Etcd server is required:
 
 ```bash
-go test ./test/client
+go test -race ./grpcstarter/...
 ```
+
+Direct client/server communication and static discovery also have local RPC tests under `test/client`.
 
 Etcd and Nacos resolver tests require external services and are skipped by default:
 
@@ -110,4 +122,4 @@ go test ./test/client -run TestCallServerWithNacosResolver
 
 Do not create multiple `GrpcStarter` instances to listen on different ports in the same process. Register multiple services into one server instead.
 
-The standard gRPC starter does not allow parent-managed restart after successful shutdown. Client connections are caller-owned and should be closed independently of the server starter.
+The standard gRPC starter does not allow parent-managed restart after successful shutdown. Client connections are caller-owned and should be closed independently of the server starter. Connection construction is lazy and does not guarantee remote readiness; apply deadlines to RPC contexts. `InitFunc` is called by the default parent setting, so overriding `GrpcSetting` replaces that callback. Configuration is resolved once with `LazyConfig` precedence; defaults are `tcp` and `:8081`.

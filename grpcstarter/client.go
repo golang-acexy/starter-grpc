@@ -8,15 +8,17 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// NewClientConn 创建客户端连接
+// NewClientConn creates a caller-owned connection; callers must supply transport credentials.
+// Creation is lazy and does not establish remote readiness; use RPC contexts for deadlines.
 func NewClientConn(target string, opts ...grpc.DialOption) (*GrpcClient, error) {
 	return NewClientConnWithTraceSupplier(target, nil, opts...)
 }
 
-// NewClientConnWithTraceSupplier 创建客户端连接
+// NewClientConnWithTraceSupplier adds unary trace propagation without replacing caller interceptors.
+// The supplier must isolate concurrent RPC state; nil disables tracing. Callers own connection closure.
 func NewClientConnWithTraceSupplier(target string, traceIdSupplier TraceIdSupplier, opts ...grpc.DialOption) (*GrpcClient, error) {
 	if traceIdSupplier != nil {
-		opts = append(opts, grpc.WithUnaryInterceptor(clientTraceInterceptor(traceIdSupplier)))
+		opts = append(opts, grpc.WithChainUnaryInterceptor(clientTraceInterceptor(traceIdSupplier)))
 	}
 	conn, err := grpc.NewClient(target, opts...)
 	if err != nil {
@@ -27,7 +29,8 @@ func NewClientConnWithTraceSupplier(target string, traceIdSupplier TraceIdSuppli
 	}, nil
 }
 
-// NewClientConnWithResolver 使用resolver配置服务端 创建客户端连接
+// NewClientConnWithResolver creates a caller-owned connection using a nonnil resolver provider.
+// The target scheme must match the builder; callers supply credentials and balancing options.
 func NewClientConnWithResolver(target string, iResolver resolver.IResolver, opts ...grpc.DialOption) (*GrpcClient, error) {
 	gResolver, err := iResolver.NewResolver()
 	if err != nil {
@@ -42,7 +45,8 @@ func NewClientConnWithResolver(target string, iResolver resolver.IResolver, opts
 	return NewClientConn(target, opts...)
 }
 
-// NewClientConnWithResolverTraceSupplier 使用resolver配置服务端 创建客户端连接
+// NewClientConnWithResolverTraceSupplier combines discovery with optional unary trace propagation.
+// The resolver provider must be nonnil; callers own connection and discovery-client closure.
 func NewClientConnWithResolverTraceSupplier(target string, traceIdSupplier TraceIdSupplier, iResolver resolver.IResolver, opts ...grpc.DialOption) (*GrpcClient, error) {
 	gResolver, err := iResolver.NewResolver()
 	if err != nil {
@@ -76,14 +80,19 @@ func clientTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryClientInt
 	}
 }
 
+// GrpcClient wraps a reusable caller-owned gRPC connection created by the client helpers.
+// Its zero value is not usable; server starter shutdown does not close client connections.
 type GrpcClient struct {
 	grpcRawClientConn *grpc.ClientConn
 }
 
+// GetRawConn exposes the shared connection for generated clients; no copy is made.
 func (g *GrpcClient) GetRawConn() *grpc.ClientConn {
 	return g.grpcRawClientConn
 }
 
+// CloseConn closes the connection and its resolvers, interrupting outstanding RPCs.
+// Caller-owned Nacos and Etcd clients remain open and must be closed separately.
 func (g *GrpcClient) CloseConn() error {
 	return g.grpcRawClientConn.Close()
 }

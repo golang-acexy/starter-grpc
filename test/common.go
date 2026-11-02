@@ -3,7 +3,7 @@ package test
 import "github.com/acexy/golang-toolkit/sys/routine"
 
 type traceIdSupplier struct {
-	rt *routine.ThreadLocal[string]
+	rt *routine.InheritableThreadLocal[string]
 }
 
 func (t *traceIdSupplier) SetTraceId(traceId string) {

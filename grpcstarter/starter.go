@@ -111,7 +111,8 @@ func serverTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryServerInt
 }
 
 // Start binds the listener and returns the raw server; serving begins asynchronously.
-// Only one server can run per process. Startup does not register discovery endpoints.
+// Only one server can run per process. Failed listener binding stops the candidate server.
+// Startup does not register discovery endpoints.
 func (g *GrpcStarter) Start() (any, error) {
 	config := g.getConfig()
 	grpcLifecycleLock.Lock()
@@ -146,6 +147,7 @@ func (g *GrpcStarter) Start() (any, error) {
 
 	lis, err := net.Listen(config.Network, config.ListenAddress)
 	if err != nil {
+		server.Stop()
 		return nil, err
 	}
 	done := make(chan struct{})

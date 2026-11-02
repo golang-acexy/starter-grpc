@@ -123,3 +123,5 @@ go test ./test/client -run TestCallServerWithNacosResolver
 Do not create multiple `GrpcStarter` instances to listen on different ports in the same process. Register multiple services into one server instead.
 
 The standard gRPC starter does not allow parent-managed restart after successful shutdown. Client connections are caller-owned and should be closed independently of the server starter. Connection construction is lazy and does not guarantee remote readiness; apply deadlines to RPC contexts. `InitFunc` is called by the default parent setting, so overriding `GrpcSetting` replaces that callback. Configuration is resolved once with `LazyConfig` precedence; defaults are `tcp` and `:8081`.
+
+If listener binding fails, the candidate server is stopped before the error is returned. Client helpers preserve the caller's DialOption slice storage when appending tracing or resolver options; option implementations remain shared and must be safe for their intended concurrent use.

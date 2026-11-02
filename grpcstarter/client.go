@@ -2,6 +2,7 @@ package grpcstarter
 
 import (
 	"context"
+	"slices"
 
 	"github.com/golang-acexy/starter-grpc/grpcstarter/resolver"
 	"google.golang.org/grpc"
@@ -16,9 +17,10 @@ func NewClientConn(target string, opts ...grpc.DialOption) (*GrpcClient, error) 
 
 // NewClientConnWithTraceSupplier adds unary trace propagation without replacing caller interceptors.
 // The supplier must isolate concurrent RPC state; nil disables tracing. Callers own connection closure.
+// Appended options do not modify caller slice storage; option implementations remain shared.
 func NewClientConnWithTraceSupplier(target string, traceIdSupplier TraceIdSupplier, opts ...grpc.DialOption) (*GrpcClient, error) {
 	if traceIdSupplier != nil {
-		opts = append(opts, grpc.WithChainUnaryInterceptor(clientTraceInterceptor(traceIdSupplier)))
+		opts = append(slices.Clip(opts), grpc.WithChainUnaryInterceptor(clientTraceInterceptor(traceIdSupplier)))
 	}
 	conn, err := grpc.NewClient(target, opts...)
 	if err != nil {
@@ -31,6 +33,7 @@ func NewClientConnWithTraceSupplier(target string, traceIdSupplier TraceIdSuppli
 
 // NewClientConnWithResolver creates a caller-owned connection using a nonnil resolver provider.
 // The target scheme must match the builder; callers supply credentials and balancing options.
+// Appended options do not modify caller slice storage; option implementations remain shared.
 func NewClientConnWithResolver(target string, iResolver resolver.IResolver, opts ...grpc.DialOption) (*GrpcClient, error) {
 	gResolver, err := iResolver.NewResolver()
 	if err != nil {
@@ -40,13 +43,14 @@ func NewClientConnWithResolver(target string, iResolver resolver.IResolver, opts
 		opts = make([]grpc.DialOption, 1)
 		opts[0] = grpc.WithResolvers(gResolver)
 	} else {
-		opts = append(opts, grpc.WithResolvers(gResolver))
+		opts = append(slices.Clip(opts), grpc.WithResolvers(gResolver))
 	}
 	return NewClientConn(target, opts...)
 }
 
 // NewClientConnWithResolverTraceSupplier combines discovery with optional unary trace propagation.
 // The resolver provider must be nonnil; callers own connection and discovery-client closure.
+// Appended options do not modify caller slice storage; option implementations remain shared.
 func NewClientConnWithResolverTraceSupplier(target string, traceIdSupplier TraceIdSupplier, iResolver resolver.IResolver, opts ...grpc.DialOption) (*GrpcClient, error) {
 	gResolver, err := iResolver.NewResolver()
 	if err != nil {
@@ -56,18 +60,17 @@ func NewClientConnWithResolverTraceSupplier(target string, traceIdSupplier Trace
 		opts = make([]grpc.DialOption, 1)
 		opts[0] = grpc.WithResolvers(gResolver)
 	} else {
-		opts = append(opts, grpc.WithResolvers(gResolver))
+		opts = append(slices.Clip(opts), grpc.WithResolvers(gResolver))
 	}
 	return NewClientConnWithTraceSupplier(target, traceIdSupplier, opts...)
 }
 
 func clientTraceInterceptor(traceIdSupplier TraceIdSupplier) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		// FromOutgoingContext already copies the map and value slices.
 		metadataCtx, ok := metadata.FromOutgoingContext(ctx)
 		if !ok {
 			metadataCtx = metadata.New(nil)
-		} else {
-			metadataCtx = metadataCtx.Copy()
 		}
 		if traceIdSupplier != nil {
 			traceId := traceIdSupplier.GetTraceId()
